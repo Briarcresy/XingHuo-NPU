@@ -7,10 +7,10 @@ module SystolicArray (
     input                rst,
     input                clear,
     input                step,
-    input  signed [15:0] a_left_row0,
-    input  signed [15:0] a_left_row1,
-    input  signed [15:0] w_top_col0,
-    input  signed [15:0] w_top_col1,
+    input  signed [7:0] a_left_row0,
+    input  signed [7:0] a_left_row1,
+    input  signed [7:0] w_top_col0,
+    input  signed [7:0] w_top_col1,
     output signed [31:0] sum00,
     output signed [31:0] sum01,
     output signed [31:0] sum10,
@@ -18,10 +18,10 @@ module SystolicArray (
 );
     // 阵列右边界和下边界的传播输出按设计无需继续使用。
     /* verilator lint_off PINCONNECTEMPTY */
-    wire signed [15:0] a00_to_01;
-    wire signed [15:0] a10_to_11;
-    wire signed [15:0] w00_to_10;
-    wire signed [15:0] w01_to_11;
+    wire signed [7:0] a00_to_01;
+    wire signed [7:0] a10_to_11;
+    wire signed [7:0] w00_to_10;
+    wire signed [7:0] w01_to_11;
 
     MacPE pe00 (
         .clk(clk),

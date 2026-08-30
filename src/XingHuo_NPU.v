@@ -1,7 +1,8 @@
 `timescale 1ns / 1ps
 
-// 教学用纯推理星火NPU顶层（Verilog-2001）。
-// 计算：Y = ReLU(A x W + bias)，A/W/Y 均为 2x2，bias 按列广播。
+// 教学用对称INT8纯推理星火NPU顶层（IEEE Verilog-2005）。
+// 计算：Y_int8 = ReLU(Requantize(A_int8 x W_int8 + bias_int32))。
+// A/W/Y均为2x2；Bias按列广播；zero-point固定为0。
 //
 // 顶层只连接各功能模块，不在这里实现具体算法：
 // control -> feeder -> systolic array -> VPU。
@@ -10,15 +11,18 @@ module XingHuo_NPU (
     input rst,
     input start,
 
-    // 矩阵元素从低位到高位依次为 00、01、10、11。
-    input [63:0] activation_matrix,
-    input [63:0] weight_matrix,
-    // 从低位到高位依次为 bias0、bias1。
-    input [31:0] bias_vector,
+    // A和W每个元素为8位有符号INT8，从低位到高位依次为00、01、10、11。
+    input [31:0] activation_matrix,
+    input [31:0] weight_matrix,
+    // 两个INT32 Bias从低位到高位依次为bias0、bias1，分别广播到输出第0/1列。
+    input [63:0] bias_vector,
+    // 输出重量化右移位数。一层内四个输出共用，0表示不缩放，范围0～31。
+    input [4:0] quant_shift,
 
     output busy,
     output done,
-    output [63:0] result_matrix
+    // 四个INT8结果从低位到高位依次为00、01、10、11。
+    output [31:0] result_matrix
 );
     // 控制通路信号。
     wire        [ 1:0] phase;
@@ -27,10 +31,10 @@ module XingHuo_NPU (
     wire               result_write_enable;
 
     // Feeder 到脉动阵列的四路边界数据。
-    wire signed [15:0] a_left_row0;
-    wire signed [15:0] a_left_row1;
-    wire signed [15:0] w_top_col0;
-    wire signed [15:0] w_top_col1;
+    wire signed [7:0] a_left_row0;
+    wire signed [7:0] a_left_row1;
+    wire signed [7:0] w_top_col0;
+    wire signed [7:0] w_top_col1;
 
     // 脉动阵列保存的四个 32 位输出部分和。
     wire signed [31:0] sum00;
@@ -80,6 +84,7 @@ module XingHuo_NPU (
         .rst(rst),
         .result_write_enable(result_write_enable),
         .bias_vector(bias_vector),
+        .quant_shift(quant_shift),
         .sum00(sum00),
         .sum01(sum01),
         .sum10(sum10),
