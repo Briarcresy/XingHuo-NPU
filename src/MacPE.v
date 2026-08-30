@@ -5,7 +5,7 @@
 // activation 向右传，weight 向下传，累加结果保存在本 PE 内。
 
 
-module q8_8_mac_pe (
+module MacPE (
     input  clk,
     input  rst,
     input  clear,

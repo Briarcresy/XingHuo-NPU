@@ -3,7 +3,7 @@
 // 纯推理流程的控制单元。
 // 只负责控制时序，不处理矩阵数据：
 // IDLE -> CLEAR -> RUN(phase 0~3) -> WRITE_RESULT -> IDLE。
-module control_unit (
+module ControlUnit (
     input clk,
     input rst,
     input start,

@@ -2,7 +2,7 @@
 
 // 将扁平的 2x2 矩阵端口转换为脉动阵列所需的逐拍边界输入。
 // 本模块相当于教学版的输入 Buffer/调度器，只负责数据排布，不保存部分和。
-module matrix_feeder_2x2 (
+module MatrixFeeder (
     input [ 1:0] phase,
     input [63:0] activation_matrix,
     input [63:0] weight_matrix,
