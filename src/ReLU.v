@@ -9,7 +9,7 @@ module ReLU (
 );
     always @(*) begin
         if (data_in <= 0) data_out = 16'sh0000;
-        else if (data_in > 32'sd32767) data_out = 16'sh7fff;
+        else if (data_in > 32'sh7fff) data_out = 16'sh7fff;
         else data_out = data_in[15:0];
     end
 endmodule
