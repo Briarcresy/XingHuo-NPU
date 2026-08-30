@@ -1,1 +1,1 @@
-# XingHuo-TPU
+# “星火” NPU

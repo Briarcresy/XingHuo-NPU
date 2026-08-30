@@ -1,11 +1,11 @@
 `timescale 1ns / 1ps
 
-// 教学用纯推理 Tiny TPU 顶层（Verilog-2001）。
+// 教学用纯推理星火NPU顶层（Verilog-2001）。
 // 计算：Y = ReLU(A x W + bias)，A/W/Y 均为 2x2，bias 按列广播。
 //
 // 顶层只连接各功能模块，不在这里实现具体算法：
 // control -> feeder -> systolic array -> VPU。
-module XingHuo_TPU (
+module XingHuo_NPU (
     input clk,
     input rst,
     input start,

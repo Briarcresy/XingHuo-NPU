@@ -1,4 +1,4 @@
-# XingHuo-TPU使用ICS55标准单元的Yosys综合脚本。
+# XingHuo-NPU使用ICS55标准单元的Yosys综合脚本。
 # argv: DESIGN "RTL_FILES" LIBERTY NETLIST CLK_FREQ_MHZ VT
 
 set DESIGN       [lindex $argv 0]

@@ -1,14 +1,14 @@
 ROOT := $(abspath ..)
 SHELL := /bin/bash
 
-DESIGN ?= XingHuo_TPU
+DESIGN ?= XingHuo_NPU
 CLK_PORT ?= clk
 CLK_FREQ_MHZ ?= 230
 VT ?= R
 
-# PDK与iEDA属于外部依赖，不提交进XingHuo-TPU仓库。
+# PDK与iEDA属于外部依赖，不提交进XingHuo-NPU仓库。
 ICS55_PDK ?= $(HOME)/pdk/icsprout55
-IEDA_BIN ?= $(HOME)/XingHuo-TPU/yosys-sta/bin/iEDA
+IEDA_BIN ?= $(HOME)/XingHuo-NPU/yosys-sta/bin/iEDA
 
 RTL_FILES := $(sort $(wildcard $(ROOT)/src/*.v))
 BUILD_DIR ?= $(ROOT)/build/ppa/$(DESIGN)-$(CLK_FREQ_MHZ)MHz-$(VT)VT
@@ -24,7 +24,7 @@ LIBERTY := $(STDCELL_ROOT)/ics55_LLSC_H7C$(VT)/liberty/ics55_LLSC_H7C$(VT)_typ_t
 
 check:
 	@test -n "$(RTL_FILES)" || { echo "ERROR: src/下没有找到Verilog RTL"; exit 1; }
-	@test -f "$(ROOT)/src/XingHuo_TPU.v" || { echo "ERROR: 缺少顶层src/XingHuo_TPU.v"; exit 1; }
+	@test -f "$(ROOT)/src/XingHuo_NPU.v" || { echo "ERROR: 缺少顶层src/XingHuo_NPU.v"; exit 1; }
 	@test -f "$(LIBERTY)" || { echo "ERROR: 找不到ICS55 Liberty: $(LIBERTY)"; echo "请设置 ICS55_PDK=/path/to/icsprout55-pdk"; exit 1; }
 	@command -v yosys >/dev/null || { echo "ERROR: PATH中找不到yosys"; exit 1; }
 	@test -x "$(IEDA_BIN)" || command -v "$(IEDA_BIN)" >/dev/null || { echo "ERROR: 找不到iEDA，请设置 IEDA_BIN=/path/to/iEDA"; exit 1; }
