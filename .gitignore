@@ -1,3 +1,19 @@
 /reference/
 /yosys-sta
 /build/
+
+# Python缓存
+__pycache__/
+*.py[cod]
+
+# Verilator与波形生成物
+obj_dir/
+*.vcd
+*.fst
+*.lxt
+
+# 本地工具和PPA日志
+*.log
+*.jou
+*.str
+*.wdb

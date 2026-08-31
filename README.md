@@ -1,96 +1,155 @@
 # “星火” NPU
 
-星火NPU是一个用于学习和小面积流片的2×2对称INT8推理加速器。当前完成：
+星火NPU是一个用于学习、验证和小面积流片迭代的2×2对称INT8推理加速器。当前数据
+通路为：
 
 ```text
 INT8矩阵乘法 → INT32累加 → INT32 Bias → 重量化 → INT8饱和 → ReLU
 ```
 
+正式RTL严格使用IEEE Verilog-2005；Python golden model独立计算期望结果；C++17
+testbench通过Verilator批量验证RTL。
+
+## 目录结构
+
+```text
+src/          正式Verilog-2005 RTL
+sim/          Python golden model、向量生成器和Verilator C++ testbench
+tests/        Python golden model单元测试
+filelists/    统一RTL文件列表
+constraints/  基础时钟约束
+docs/         架构、接口、量化和验证文档
+ppa/          Yosys、ICS55与iEDA PPA评估流程
+reference/    学习参考代码，不参与正式构建
+build/        自动生成的向量、模型、日志和报告，不提交Git
+```
+
+## 快速开始
+
+需要：
+
+- Python 3.10或更新版本；
+- Verilator；
+- 支持C++17的C++编译器和GNU Make。
+
+查看所有入口：
+
+```bash
+make help
+```
+
+检查全部正式RTL：
+
+```bash
+make lint
+```
+
+生成向量、构建模型并运行默认批量仿真：
+
+```bash
+make sim
+```
+
+默认生成12个定向用例和1000个固定种子随机用例。成功结果为：
+
+```text
+ALL 1012 TESTS PASSED
+directed=12 random=1000 seed=0x20260831
+```
+
+修改随机数量和种子：
+
+```bash
+make sim TEST_COUNT=10000 TEST_SEED=12345
+```
+
+单独测试Python golden model：
+
+```bash
+python3 -m unittest discover -s tests -v
+```
+
+运行全部开源验证：
+
+```bash
+make test
+```
+
+清理功能仿真生成物或全部生成物：
+
+```bash
+make clean-sim
+make clean
+```
+
 ## 数值格式
 
-- Activation和Weight使用8位二补码INT8，范围为-128～127；
-- 乘法产生完整的INT16结果，不提前截断；
-- PE使用INT32累加器，避免短矩阵乘法中的累加溢出；
-- Bias使用INT32，并且必须与累加器使用相同尺度；
-- 输出经过舍入、饱和后成为INT8，ReLU将负数变为0。
+- Activation和Weight是有符号INT8；
+- 单次乘法产生完整INT16结果；
+- PE使用INT32累加器；
+- Bias是与累加值同尺度的INT32，并按输出列广播；
+- `quant_shift`实现2的幂缩放、就近舍入和INT8饱和；
+- ReLU将负数输出变为0；
+- Activation、Weight和输出zero-point固定为0。
 
-本设计采用对称量化，所以Activation、Weight和输出的zero-point都固定为0。软件侧
-应按照下面的方式生成Bias整数：
-
-```text
-bias_int32 = round(real_bias / (activation_scale * weight_scale))
-```
-
-完整INT8重量化通常需要乘法系数。本设计为了节省面积，暂时只支持2的幂缩放：
-
-```text
-output_int8 = saturate(round(accumulator / 2^quant_shift))
-```
-
-`quant_shift=0`表示不缩放，`quant_shift=1`表示除以2，以此类推。一层的四个输出
-共用同一个`quant_shift`。这适合教学和第一版流片，以后可以升级为每通道乘数和移位。
-
-## 顶层接口
-
-顶层模块为`XingHuo_NPU`，位于`src/XingHuo_NPU.v`。
-
-矩阵总线都采用行优先顺序，从低位到高位依次存放00、01、10、11元素：
+矩阵总线从低位到高位存放00、01、10、11：
 
 ```text
 activation_matrix = {A11, A10, A01, A00}
 weight_matrix     = {W11, W10, W01, W00}
 result_matrix     = {Y11, Y10, Y01, Y00}
+bias_vector       = {bias1, bias0}
 ```
 
-每个A、W和Y元素占8位。`bias_vector`包含两个INT32 Bias：
-
-```text
-bias_vector = {bias1, bias0}
-```
-
-其中`bias0`用于输出第0列，`bias1`用于输出第1列。
+详细规则见[量化说明](docs/quantization.md)和[接口说明](docs/interfaces.md)。
 
 ## 模块结构
 
 ```text
 XingHuo_NPU
-├── ControlUnit       控制CLEAR、RUN和结果写回
-├── MatrixFeeder      按脉动阵列时序错开输入数据
-├── SystolicArray     2×2输出驻留脉动阵列
-│   └── MacPE × 4     INT8乘法和INT32累加
+├── ControlUnit
+├── MatrixFeeder
+├── SystolicArray
+│   └── MacPE × 4
 └── VPU
-    ├── Bias × 4      加INT32 Bias
-    ├── Requantize ×4 舍入、右移并饱和到INT8
-    └── ReLU ×4       将负数钳位为0
+    ├── Bias × 4
+    ├── Requantize × 4
+    └── ReLU × 4
 ```
 
-## 行为仿真
+详细数据流和状态时序见[架构说明](docs/architecture.md)。
 
-自检testbench位于`tb/XingHuo_NPU_tb.v`。运行：
+## 验证方法
 
-```bash
-mkdir -p build/sim
-iverilog -g2005 -Wall -s XingHuo_NPU_tb \
-  -o build/sim/xinghuo_npu_tb.vvp src/*.v tb/XingHuo_NPU_tb.v
-vvp build/sim/xinghuo_npu_tb.vvp
-```
-
-正确结果应包含：
-
-```text
-PASS: basic_int8_matmul
-PASS: requantize_shift
-PASS: relu_negative_to_zero
-ALL TESTS PASSED
-```
-
-运行Verilator lint：
-
-```bash
-verilator --lint-only -Wall --language 1364-2005 --top-module XingHuo_NPU src/*.v
-```
+`sim/generate_vectors.py`生成定向和随机输入，并调用`sim/golden_model.py`得到expected。
+生成文件位于`build/sim/test_vectors.txt`。C++ testbench只读取向量、驱动DUT并比较
+actual，不包含任何手工expected。详见[验证说明](docs/verification.md)。
 
 ## PPA评估
 
-详细方法见`ppa/README.md`。综合和时序分析只读取`src/`下的正式RTL，生成物保存在
-`build/ppa/`，不会提交到Git。
+本地ICS55流程需要额外安装Yosys、ICsprout55 PDK和包含iSTA/iPA的iEDA。检查依赖：
+
+```bash
+make ppa-check \
+  ICS55_PDK=/path/to/icsprout55-pdk \
+  IEDA_BIN=/path/to/iEDA
+```
+
+运行评估：
+
+```bash
+make ppa \
+  ICS55_PDK=/path/to/icsprout55-pdk \
+  IEDA_BIN=/path/to/iEDA
+```
+
+当前PPA默认目标为300 MHz（约3.333 ns），可以通过`CLK_FREQ_MHZ`覆盖。详细说明见
+[`ppa/README.md`](ppa/README.md)。PPA依赖和工艺库不进入公共CI。
+
+## 当前限制
+
+- 固定2×2矩阵规模，没有可编程指令或片上Unified Buffer；
+- 输入在一次任务执行期间必须由外部保持稳定；
+- 只支持共享的2次幂重量化右移和固定ReLU；
+- 没有非零zero-point、逐通道量化、DMA、总线包装或SoC软件栈；
+- 基础SDC只约束时钟，封装确定前没有虚构IO delay、驱动和负载。

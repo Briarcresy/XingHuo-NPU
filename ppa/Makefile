@@ -3,14 +3,16 @@ SHELL := /bin/bash
 
 DESIGN ?= XingHuo_NPU
 CLK_PORT ?= clk
-CLK_FREQ_MHZ ?= 250
+CLK_FREQ_MHZ ?= 300
 VT ?= R
 
 # PDK与iEDA属于外部依赖，不提交进XingHuo-NPU仓库。
 ICS55_PDK ?= $(HOME)/pdk/icsprout55
 IEDA_BIN ?= $(HOME)/XingHuo-NPU/yosys-sta/bin/iEDA
 
-RTL_FILES := $(sort $(wildcard $(ROOT)/src/*.v))
+RTL_FILELIST := $(ROOT)/filelists/rtl.f
+RTL_REL_FILES := $(shell awk 'NF && substr($$1, 1, 1) != sprintf("%c", 35) { print $$1 }' "$(RTL_FILELIST)")
+RTL_FILES := $(addprefix $(ROOT)/,$(RTL_REL_FILES))
 BUILD_DIR ?= $(ROOT)/build/ppa/$(DESIGN)-$(CLK_FREQ_MHZ)MHz-$(VT)VT
 SCRIPT_DIR := $(ROOT)/ppa/scripts
 SDC_FILE := $(BUILD_DIR)/$(DESIGN).sdc
@@ -23,6 +25,7 @@ LIBERTY := $(STDCELL_ROOT)/ics55_LLSC_H7C$(VT)/liberty/ics55_LLSC_H7C$(VT)_typ_t
 .DEFAULT_GOAL := ppa
 
 check:
+	@test -f "$(RTL_FILELIST)" || { echo "ERROR: 缺少$(RTL_FILELIST)"; exit 1; }
 	@test -n "$(RTL_FILES)" || { echo "ERROR: src/下没有找到Verilog RTL"; exit 1; }
 	@test -f "$(ROOT)/src/XingHuo_NPU.v" || { echo "ERROR: 缺少顶层src/XingHuo_NPU.v"; exit 1; }
 	@test -f "$(LIBERTY)" || { echo "ERROR: 找不到ICS55 Liberty: $(LIBERTY)"; echo "请设置 ICS55_PDK=/path/to/icsprout55-pdk"; exit 1; }
@@ -41,7 +44,7 @@ $(SDC_FILE): | $(BUILD_DIR)
 
 syn: check $(NETLIST)
 
-$(NETLIST): $(RTL_FILES) $(SCRIPT_DIR)/synth.tcl Makefile | $(BUILD_DIR)
+$(NETLIST): $(RTL_FILELIST) $(RTL_FILES) $(SCRIPT_DIR)/synth.tcl Makefile | $(BUILD_DIR)
 	@echo "正在进行Yosys综合与面积分析……"
 	@set -o pipefail; \
 		if ! echo tcl "$(SCRIPT_DIR)/synth.tcl" "$(DESIGN)" \"$(RTL_FILES)\" "$(LIBERTY)" "$@" "$(CLK_FREQ_MHZ)" "$(VT)" | \

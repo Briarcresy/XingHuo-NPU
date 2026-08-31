@@ -1,0 +1,20 @@
+name: Verify RTL
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  open-source-verification:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Verilator
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y verilator
+
+      - name: Run golden-model tests, RTL lint and batch simulation
+        run: make test
