@@ -10,6 +10,12 @@ INT8矩阵乘法 → INT32累加 → INT32 Bias → 重量化 → INT8饱和 →
 正式RTL严格使用IEEE Verilog-2005；Python golden model独立计算期望结果；C++17
 testbench通过Verilator批量验证RTL。
 
+## 当前版本：NPU1.0
+
+`NPU1.0`是星火NPU的第一个完整可验证版本，包含2×2 INT8矩阵乘法、INT32累加与
+Bias、重量化、INT8饱和和ReLU，并已接入Python golden model、批量Verilator验证
+以及ICS55 PPA评估流程。
+
 ## 目录结构
 
 ```text
