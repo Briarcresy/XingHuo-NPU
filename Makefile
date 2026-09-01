@@ -32,7 +32,7 @@ help:
 	@echo "  make lint       Verilator检查全部Verilog-2005 RTL"
 	@echo "  make vectors    用Python golden model生成批量测试向量"
 	@echo "  make sim        生成向量、构建并运行Verilator仿真"
-	@echo "  make sva-test   用Verilator运行NPU1.1周期级SVA"
+	@echo "  make sva-test   用Verilator运行NPU1.2周期级SVA"
 	@echo "  make test       运行Python、Verilator批量仿真和SVA"
 	@echo "  make ppa-check  检查本地ICS55 PPA依赖"
 	@echo "  make ppa        运行现有ICS55 PPA流程"
@@ -71,9 +71,9 @@ python-test: $(GOLDEN_MODEL) $(PYTHON_TESTS)
 
 sva-test: $(RTL_FILELIST) $(RTL_FILES) verification/XingHuo_NPU_assertions.sv verification/XingHuo_NPU_sva_tb.sv
 	@mkdir -p "$(SVA_BUILD_DIR)"
-	@echo "Running NPU1.1 SVA test..."
+	@echo "Running NPU1.2 SVA test..."
 	@if ! $(VERILATOR) --binary --assert --timing -Wall -Wno-BLKSEQ \
-		-Wno-PROCASSINIT -Wno-UNUSEDSIGNAL -Wno-SYNCASYNCNET \
+		-Wno-UNUSEDSIGNAL -Wno-SYNCASYNCNET \
 		--top-module XingHuo_NPU_sva_tb --Mdir "$(SVA_BUILD_DIR)/obj" \
 		-f "$(RTL_FILELIST)" verification/XingHuo_NPU_assertions.sv \
 		verification/XingHuo_NPU_sva_tb.sv > "$(SVA_LOG)" 2>&1; then \
@@ -82,7 +82,7 @@ sva-test: $(RTL_FILELIST) $(RTL_FILES) verification/XingHuo_NPU_assertions.sv ve
 	@if ! "$(SVA_BUILD_DIR)/obj/VXingHuo_NPU_sva_tb" >> "$(SVA_LOG)" 2>&1; then \
 		echo "ERROR: SVA仿真失败，日志末尾如下："; tail -n 80 "$(SVA_LOG)"; exit 1; \
 	fi
-	@grep "NPU1.1 SVA TEST PASS" "$(SVA_LOG)"
+	@grep "NPU1.2 SVA TEST PASS" "$(SVA_LOG)"
 
 test: python-test sim sva-test
 

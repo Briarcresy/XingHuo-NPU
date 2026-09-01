@@ -1,6 +1,6 @@
 `timescale 1ns / 1ps
 
-// INT32到INT8的重量化单元。
+// INT32到INT8的Requantization Unit（重量化单元）。
 //
 // 完整的神经网络INT8量化常写成：
 //   output_int8 = saturate(round(accumulator * scale) + zero_point)
@@ -8,7 +8,7 @@
 // 本教学版采用低面积的“对称、2的幂缩放”方案：
 //   zero_point = 0
 //   scale       = 1 / 2^shift
-// 因此硬件只需右移、舍入和饱和，不需要额外的32位乘法器。
+// 因此硬件只需右移、Rounding（舍入）和Saturation（饱和），不需要额外的32位乘法器。
 module Requantize (
     input  signed     [31:0] data_in,
     input             [ 4:0] shift,

@@ -1,37 +1,50 @@
 `timescale 1ns / 1ps
 
-// 2×2 输出驻留脉动阵列。
-// A 从左向右传播，W 从上向下传播，每个 PE 保存一个输出元素的部分和。
+// 2×2 Output Stationary（输出驻留）Systolic Array（脉动阵列）。
+// Activation从左向右传播，Weight驻留在PE内，每个PE保存一个输出Partial Sum（部分和）。
 module SystolicArray (
     input                clk,
     input                rst,
     input                clear,
     input                step,
+    input         [1:0]  phase,
+    input                weight_load,
+    input                weight_switch,
+    input        [31:0]  weight_matrix,
     input  signed [7:0] a_left_row0,
     input  signed [7:0] a_left_row1,
-    input  signed [7:0] w_top_col0,
-    input  signed [7:0] w_top_col1,
     output signed [31:0] sum00,
     output signed [31:0] sum01,
     output signed [31:0] sum10,
     output signed [31:0] sum11
 );
-    // 阵列右边界和下边界的传播输出按设计无需继续使用。
+    wire signed [7:0] weight_00;
+    wire signed [7:0] weight_01;
+    wire signed [7:0] weight_10;
+    wire signed [7:0] weight_11;
+
+    assign weight_00 = weight_matrix[7:0];
+    assign weight_01 = weight_matrix[15:8];
+    assign weight_10 = weight_matrix[23:16];
+    assign weight_11 = weight_matrix[31:24];
+
+    // 阵列右边界的Activation传播输出按设计无需继续使用。
     /* verilator lint_off PINCONNECTEMPTY */
     wire signed [7:0] a00_to_01;
     wire signed [7:0] a10_to_11;
-    wire signed [7:0] w00_to_10;
-    wire signed [7:0] w01_to_11;
 
     MacPE pe00 (
         .clk(clk),
         .rst(rst),
         .clear(clear),
         .enable(step),
+        .weight_load(weight_load),
+        .weight_switch(weight_switch),
+        .weight_select(phase == 2'd1),
+        .shadow_weight_0_in(weight_00),
+        .shadow_weight_1_in(weight_10),
         .activation_in(a_left_row0),
-        .weight_in(w_top_col0),
         .activation_out(a00_to_01),
-        .weight_out(w00_to_10),
         .accumulator(sum00)
     );
 
@@ -40,10 +53,13 @@ module SystolicArray (
         .rst(rst),
         .clear(clear),
         .enable(step),
+        .weight_load(weight_load),
+        .weight_switch(weight_switch),
+        .weight_select(phase == 2'd2),
+        .shadow_weight_0_in(weight_01),
+        .shadow_weight_1_in(weight_11),
         .activation_in(a00_to_01),
-        .weight_in(w_top_col1),
         .activation_out(),
-        .weight_out(w01_to_11),
         .accumulator(sum01)
     );
 
@@ -52,10 +68,13 @@ module SystolicArray (
         .rst(rst),
         .clear(clear),
         .enable(step),
+        .weight_load(weight_load),
+        .weight_switch(weight_switch),
+        .weight_select(phase == 2'd2),
+        .shadow_weight_0_in(weight_00),
+        .shadow_weight_1_in(weight_10),
         .activation_in(a_left_row1),
-        .weight_in(w00_to_10),
         .activation_out(a10_to_11),
-        .weight_out(),
         .accumulator(sum10)
     );
 
@@ -64,10 +83,13 @@ module SystolicArray (
         .rst(rst),
         .clear(clear),
         .enable(step),
+        .weight_load(weight_load),
+        .weight_switch(weight_switch),
+        .weight_select(phase == 2'd3),
+        .shadow_weight_0_in(weight_01),
+        .shadow_weight_1_in(weight_11),
         .activation_in(a10_to_11),
-        .weight_in(w01_to_11),
         .activation_out(),
-        .weight_out(),
         .accumulator(sum11)
     );
     /* verilator lint_on PINCONNECTEMPTY */
