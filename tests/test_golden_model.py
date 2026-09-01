@@ -5,6 +5,9 @@ from sim.golden_model import (
     INT32_MIN,
     Matrix2x2,
     NpuInputs,
+    ERROR_BIAS_OVERFLOW,
+    bias_add_int32,
+    expected_error_code,
     infer,
     matmul_2x2,
     requantize_int32,
@@ -52,6 +55,16 @@ class GoldenModelTest(unittest.TestCase):
     def test_int32_wrap(self):
         self.assertEqual(wrap_signed(INT32_MAX + 1, 32), INT32_MIN)
         self.assertEqual(wrap_signed(INT32_MIN - 1, 32), INT32_MAX)
+
+    def test_bias_overflow_status(self):
+        self.assertEqual(bias_add_int32(INT32_MAX, 1), (INT32_MIN, True))
+        self.assertEqual(bias_add_int32(INT32_MIN, -1), (INT32_MAX, True))
+        self.assertEqual(bias_add_int32(100, -50), (50, False))
+
+        overflowing = NpuInputs(
+            Matrix2x2(1, 1, 1, 1), Matrix2x2(1, 1, 1, 1), INT32_MAX, 0, 0
+        )
+        self.assertEqual(expected_error_code(overflowing), ERROR_BIAS_OVERFLOW)
 
     def test_invalid_ranges_are_rejected(self):
         with self.assertRaises(ValueError):

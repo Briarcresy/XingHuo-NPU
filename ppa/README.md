@@ -32,8 +32,8 @@ make -C ppa ppa \
   IEDA_BIN=/path/to/iEDA
 ```
 
-默认配置为ICS55 RVT、TT、1.2V、25°C和300MHz。根目录
-`constraints/XingHuo_NPU.sdc`记录相同的约3.333ns基础时钟假设；PPA流程会根据
+默认配置为ICS55 RVT、TT、1.2V、25°C和100MHz。根目录
+`constraints/XingHuo_NPU.sdc`记录相同的10ns基础时钟假设；PPA流程会根据
 `CLK_FREQ_MHZ`在对应build目录动态生成SDC。修改频率：
 
 ```bash
@@ -53,7 +53,7 @@ make -C ppa ppa VT=L \
 每组配置使用独立输出目录，例如：
 
 ```text
-build/ppa/XingHuo_NPU-300MHz-RVT/
+build/ppa/XingHuo_NPU-100MHz-RVT/
 ```
 
 关键报告：

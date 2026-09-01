@@ -9,9 +9,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 try:
-    from .golden_model import INT32_MAX, INT32_MIN, Matrix2x2, NpuInputs, infer
+    from .golden_model import INT32_MAX, INT32_MIN, Matrix2x2, NpuInputs, expected_error_code, infer
 except ImportError:  # 允许直接执行python3 sim/generate_vectors.py。
-    from golden_model import INT32_MAX, INT32_MIN, Matrix2x2, NpuInputs, infer
+    from golden_model import INT32_MAX, INT32_MIN, Matrix2x2, NpuInputs, expected_error_code, infer
 
 DEFAULT_COUNT = 1000
 DEFAULT_SEED = 0x20260831
@@ -76,7 +76,7 @@ def write_vectors(path: Path, cases: list[NamedCase], directed_count: int, rando
     with path.open("w", encoding="ascii", newline="\n") as output:
         output.write("# XingHuo-NPU vector format v1\n")
         output.write(f"# directed={directed_count} random={random_count} seed=0x{seed:x}\n")
-        output.write("# name activation_hex weight_hex bias_hex shift expected_hex\n")
+        output.write("# name activation_hex weight_hex bias_hex shift expected_hex error_hex\n")
         for case in cases:
             expected = infer(case.inputs).pack()
             output.write(
@@ -85,7 +85,8 @@ def write_vectors(path: Path, cases: list[NamedCase], directed_count: int, rando
                 f"{case.inputs.weight.pack():08x} "
                 f"{case.inputs.pack_bias():016x} "
                 f"{case.inputs.quant_shift:d} "
-                f"{expected:08x}\n"
+                f"{expected:08x} "
+                f"{expected_error_code(case.inputs):02x}\n"
             )
 
 

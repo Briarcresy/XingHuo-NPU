@@ -13,6 +13,9 @@ INT8_MAX = (1 << 7) - 1
 INT32_MIN = -(1 << 31)
 INT32_MAX = (1 << 31) - 1
 
+ERROR_START_WHILE_BUSY = 1 << 0
+ERROR_BIAS_OVERFLOW = 1 << 1
+
 
 def wrap_signed(value: int, bits: int) -> int:
     """只保留低bits位，再按二补码解释为有符号整数。"""
@@ -95,6 +98,17 @@ def matmul_2x2(activation: Matrix2x2, weight: Matrix2x2) -> tuple[int, int, int,
     )
 
 
+def bias_add_int32(accumulator: int, bias: int) -> tuple[int, bool]:
+    """执行RTL的INT32 Bias加法，同时报告数学结果是否超出INT32范围。"""
+    if not INT32_MIN <= accumulator <= INT32_MAX:
+        raise ValueError("累加值必须在INT32范围内")
+    if not INT32_MIN <= bias <= INT32_MAX:
+        raise ValueError("Bias必须在INT32范围内")
+    mathematical_sum = accumulator + bias
+    overflow = not INT32_MIN <= mathematical_sum <= INT32_MAX
+    return wrap_signed(mathematical_sum, 32), overflow
+
+
 def requantize_int32(value: int, shift: int) -> int:
     """匹配Requantize.v的加偏置、算术右移和INT8饱和。"""
     if not INT32_MIN <= value <= INT32_MAX:
@@ -115,8 +129,16 @@ def infer(inputs: NpuInputs) -> Matrix2x2:
 
     for accumulator, bias in zip(sums, biases):
         # Bias.v的输出只有32位，溢出时只保留低32位。
-        biased = wrap_signed(accumulator + bias, 32)
+        biased, _ = bias_add_int32(accumulator, bias)
         quantized = requantize_int32(biased, inputs.quant_shift)
         outputs.append(max(0, quantized))
 
     return Matrix2x2(*outputs)
+
+
+def expected_error_code(inputs: NpuInputs) -> int:
+    """返回一次合法任务结束后应置位的NPU1.1数值错误标志。"""
+    sums = matmul_2x2(inputs.activation, inputs.weight)
+    biases = (inputs.bias_0, inputs.bias_1, inputs.bias_0, inputs.bias_1)
+    overflow = any(bias_add_int32(value, bias)[1] for value, bias in zip(sums, biases))
+    return ERROR_BIAS_OVERFLOW if overflow else 0

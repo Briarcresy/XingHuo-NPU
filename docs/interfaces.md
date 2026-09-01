@@ -7,6 +7,7 @@
 | `clk` | 输入 | 1 | 上升沿时钟 |
 | `rst` | 输入 | 1 | 高有效异步复位 |
 | `start` | 输入 | 1 | 在空闲状态启动一次任务 |
+| `clear_error` | 输入 | 1 | 清除粘滞错误，不中断当前任务 |
 | `activation_matrix` | 输入 | 32 | 2×2 INT8 Activation |
 | `weight_matrix` | 输入 | 32 | 2×2 INT8 Weight |
 | `bias_vector` | 输入 | 64 | 两个INT32 Bias |
@@ -14,6 +15,25 @@
 | `busy` | 输出 | 1 | 正在执行任务 |
 | `done` | 输出 | 1 | 结果写回完成，保持一个周期 |
 | `result_matrix` | 输出 | 32 | 2×2 ReLU后INT8结果 |
+| `error` | 输出 | 1 | `error_code`任意位非0 |
+| `error_code` | 输出 | 8 | NPU1.1粘滞错误位 |
+| `cycle_count` | 输出 | 16 | 最近一个完成任务的Core周期数 |
+| `task_count` | 输出 | 32 | 复位以来累计完成任务数 |
+
+## NPU1.1可观测性接口
+
+| 位 | 名称 | 置位条件 |
+|---:|---|---|
+| 0 | `START_WHILE_BUSY` | `busy=1`期间再次采样到`start=1` |
+| 1 | `BIAS_OVERFLOW` | 任一路INT32累加值与Bias相加发生二补码溢出 |
+| 7:2 | 保留 | 固定为0 |
+
+错误位是粘滞的：事件消失后仍保持为1，直到`clear_error=1`的时钟沿或`rst=1`。
+`clear_error`不清除结果、`cycle_count`或`task_count`，也不会中断正在执行的任务。
+
+Bias溢出只报告数学结果超出INT32范围，不改变NPU1.0的数值规则：实际数据仍保留
+加法结果低32位，然后继续重量化和ReLU。当前2×2实现正常任务`cycle_count=6`；
+内部当前周期计数饱和于`16'hffff`，`task_count`按32位自然回绕。
 
 ## 数据打包
 
@@ -39,6 +59,7 @@ bias_vector[63:32] = bias_1  // 输出第1列
 ## 握手要求
 
 - 只在`busy=0`时拉高`start`；
+- `busy=1`期间的`start`不会重启任务，但会置位`error_code[0]`；
 - `start`保持一个完整时钟周期即可；
 - 当前接口没有输入锁存，任务期间必须保持所有数值输入稳定；
 - `done=1`时`result_matrix`已经有效；

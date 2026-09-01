@@ -14,6 +14,9 @@ Bias的常见离线计算方式是：
 bias_int32 = round(real_bias / (activation_scale × weight_scale))
 ```
 
+NPU1.1会检测`INT32 accumulator + INT32 bias`的数学结果是否超出INT32范围。发生
+溢出时仍按二补码保留低32位以兼容NPU1.0，同时置位`error_code[1]`供软件诊断。
+
 ## 当前重量化
 
 完整量化通常需要乘法比例系数和zero-point。当前版本为减小面积，使用对称、2的幂

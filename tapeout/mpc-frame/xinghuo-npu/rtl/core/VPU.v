@@ -1,4 +1,3 @@
-`timescale 1ns / 1ps
 
 // INT8推理VPU（向量处理单元）。
 // 每路依次完成：INT32 Bias加法 -> 重量化到INT8 -> ReLU。
@@ -13,8 +12,7 @@ module VPU (
     input  signed [31:0] sum01,
     input  signed [31:0] sum10,
     input  signed [31:0] sum11,
-    output reg    [31:0] result_matrix,
-    output               bias_overflow
+    output reg    [31:0] result_matrix
 );
     // Bias按输出列广播。每个Bias是INT32，并与MAC累加值处于相同量化尺度。
     wire signed [31:0] bias_0;
@@ -23,10 +21,6 @@ module VPU (
     wire signed [31:0] biased_sum_01;
     wire signed [31:0] biased_sum_10;
     wire signed [31:0] biased_sum_11;
-    wire               bias_overflow_00;
-    wire               bias_overflow_01;
-    wire               bias_overflow_10;
-    wire               bias_overflow_11;
     wire signed [7:0] requantized_00;
     wire signed [7:0] requantized_01;
     wire signed [7:0] requantized_10;
@@ -38,33 +32,27 @@ module VPU (
 
     assign bias_0 = bias_vector[31:0];
     assign bias_1 = bias_vector[63:32];
-    assign bias_overflow = bias_overflow_00 | bias_overflow_01
-                         | bias_overflow_10 | bias_overflow_11;
 
     // 第一阶段：Bias 按列广播，第 0 列使用 bias_0，第 1 列使用 bias_1。
     Bias bias_00 (
         .sum_in(sum00),
         .bias_in(bias_0),
-        .biased_sum_out(biased_sum_00),
-        .overflow(bias_overflow_00)
+        .biased_sum_out(biased_sum_00)
     );
     Bias bias_01 (
         .sum_in(sum01),
         .bias_in(bias_1),
-        .biased_sum_out(biased_sum_01),
-        .overflow(bias_overflow_01)
+        .biased_sum_out(biased_sum_01)
     );
     Bias bias_10 (
         .sum_in(sum10),
         .bias_in(bias_0),
-        .biased_sum_out(biased_sum_10),
-        .overflow(bias_overflow_10)
+        .biased_sum_out(biased_sum_10)
     );
     Bias bias_11 (
         .sum_in(sum11),
         .bias_in(bias_1),
-        .biased_sum_out(biased_sum_11),
-        .overflow(bias_overflow_11)
+        .biased_sum_out(biased_sum_11)
     );
 
     // 第二阶段：统一进行右移、舍入和INT8饱和。
