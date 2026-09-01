@@ -1,0 +1,39 @@
+{
+  "name": "xinghuo-npu",
+  "module": "XinghuoNpu",
+  "sources": [
+    "rtl/core/Bias.v",
+    "rtl/core/ControlUnit.v",
+    "rtl/core/MacPE.v",
+    "rtl/core/MatrixFeeder.v",
+    "rtl/core/ReLU.v",
+    "rtl/core/Requantize.v",
+    "rtl/core/SystolicArray.v",
+    "rtl/core/VPU.v",
+    "rtl/core/XingHuo_NPU.v",
+    "rtl/XinghuoNpu.sv"
+  ],
+  "include_dirs": [],
+  "defines": {},
+  "parameters": {
+    "IO_WIDTH": 66
+  },
+  "tests": [
+    {
+      "name": "io",
+      "kind": "unit",
+      "top": "XinghuoNpuTb",
+      "sources": [
+        "tests/XinghuoNpuTb.sv"
+      ]
+    },
+    {
+      "name": "frame",
+      "kind": "frame",
+      "top": "FrameXinghuoNpuTb",
+      "sources": [
+        "tests/FrameXinghuoNpuTb.sv"
+      ]
+    }
+  ]
+}
