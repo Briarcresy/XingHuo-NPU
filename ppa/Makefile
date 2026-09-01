@@ -3,7 +3,7 @@ SHELL := /bin/bash
 
 DESIGN ?= XingHuo_NPU
 CLK_PORT ?= clk
-CLK_FREQ_MHZ ?= 300
+CLK_FREQ_MHZ ?= 100
 VT ?= R
 
 # PDK与iEDA属于外部依赖，不提交进XingHuo-NPU仓库。

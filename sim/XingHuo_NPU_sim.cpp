@@ -14,6 +14,8 @@ namespace {
 
 constexpr int kMaximumWaitCycles = 32;
 constexpr int kMaximumReportedFailures = 10;
+constexpr std::uint16_t kExpectedCoreCycles = 6;
+constexpr std::uint8_t kErrorStartWhileBusy = 1U << 0;
 
 struct TestVector {
     std::string name;
@@ -22,6 +24,7 @@ struct TestVector {
     std::uint64_t bias;
     std::uint8_t quant_shift;
     std::uint32_t expected;
+    std::uint8_t expected_error;
 };
 
 struct VectorSet {
@@ -102,8 +105,10 @@ VectorSet read_vectors(const std::string& path)
         std::string bias;
         std::string shift;
         std::string expected;
+        std::string expected_error;
         TestVector vector;
-        if (!(stream >> vector.name >> activation >> weight >> bias >> shift >> expected)) {
+        if (!(stream >> vector.name >> activation >> weight >> bias >> shift >> expected
+              >> expected_error)) {
             throw std::runtime_error("测试向量第" + std::to_string(line_number) + "行字段不足");
         }
         std::string extra;
@@ -120,6 +125,7 @@ VectorSet read_vectors(const std::string& path)
         vector.bias = parse_hex(bias);
         vector.quant_shift = static_cast<std::uint8_t>(shift_value);
         vector.expected = static_cast<std::uint32_t>(parse_hex(expected));
+        vector.expected_error = static_cast<std::uint8_t>(parse_hex(expected_error));
         vector_set.vectors.push_back(vector);
     }
 
@@ -186,13 +192,52 @@ public:
         }
 
         const std::uint32_t actual = dut_.result_matrix;
-        if (actual == vector.expected) {
+        const bool status_matches = dut_.error_code == vector.expected_error
+            && dut_.error == (vector.expected_error != 0)
+            && dut_.cycle_count == kExpectedCoreCycles
+            && dut_.task_count == index + 1;
+        if (actual == vector.expected && status_matches) {
             return true;
         }
         if (report_failure) {
             report_mismatch(vector, index, actual);
+            report_status_mismatch(vector, index);
         }
         return false;
+    }
+
+    bool verify_rejected_start()
+    {
+        clear_errors();
+        dut_.activation_matrix = 0;
+        dut_.weight_matrix = 0;
+        dut_.bias_vector = 0;
+        dut_.quant_shift = 0;
+
+        dut_.start = 1;
+        tick(); // IDLE接受任务。
+        tick(); // busy期间再次观察到start，应置位协议错误。
+        dut_.start = 0;
+
+        for (int cycle = 0; cycle < kMaximumWaitCycles; ++cycle) {
+            tick();
+            if (dut_.done) {
+                tick(); // 让可观测性计数器锁存done事件。
+                break;
+            }
+        }
+
+        if (!dut_.error || !(dut_.error_code & kErrorStartWhileBusy)) {
+            std::cerr << "FAIL observability: start-while-busy was not reported\n";
+            return false;
+        }
+
+        clear_errors();
+        if (dut_.error || dut_.error_code != 0) {
+            std::cerr << "FAIL observability: clear_error did not clear sticky errors\n";
+            return false;
+        }
+        return true;
     }
 
 private:
@@ -203,6 +248,7 @@ private:
         dut_.clk = 0;
         dut_.rst = 0;
         dut_.start = 0;
+        dut_.clear_error = 0;
         dut_.activation_matrix = 0;
         dut_.weight_matrix = 0;
         dut_.bias_vector = 0;
@@ -239,6 +285,7 @@ private:
 
     bool start_and_wait()
     {
+        clear_errors();
         dut_.start = 1;
         tick();
         dut_.start = 0;
@@ -246,10 +293,19 @@ private:
         for (int cycle = 0; cycle < kMaximumWaitCycles; ++cycle) {
             tick();
             if (dut_.done) {
+                // done由ControlUnit产生；顶层计数器在下一上升沿观察并锁存它。
+                tick();
                 return true;
             }
         }
         return false;
+    }
+
+    void clear_errors()
+    {
+        dut_.clear_error = 1;
+        tick();
+        dut_.clear_error = 0;
     }
 
     static void report_mismatch(const TestVector& vector, std::size_t index, std::uint32_t actual)
@@ -267,6 +323,15 @@ private:
                   << " packed=0x" << format_hex(vector.expected, 8) << '\n'
                   << "  actual=" << format_matrix(actual)
                   << " packed=0x" << format_hex(actual, 8) << '\n';
+    }
+
+    void report_status_mismatch(const TestVector& vector, std::size_t index) const
+    {
+        std::cerr << "  status #" << index
+                  << ": expected_error=0x" << format_hex(vector.expected_error, 2)
+                  << " actual_error=0x" << format_hex(dut_.error_code, 2)
+                  << " cycle_count=" << dut_.cycle_count
+                  << " task_count=" << dut_.task_count << '\n';
     }
 };
 
@@ -290,6 +355,10 @@ int main(int argc, char** argv)
             if (!testbench.run(vector_set.vectors[index], index, report_failure)) {
                 ++failures;
             }
+        }
+
+        if (!testbench.verify_rejected_start()) {
+            ++failures;
         }
 
         if (failures == 0) {

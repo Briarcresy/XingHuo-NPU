@@ -8,7 +8,13 @@
 module Bias (
     input  signed [31:0] sum_in,
     input  signed [31:0] bias_in,
-    output signed [31:0] biased_sum_out
+    output signed [31:0] biased_sum_out,
+    output               overflow
 );
     assign biased_sum_out = sum_in + bias_in;
+
+    // 二补码加法溢出：两个操作数同号，但32位结果与操作数异号。
+    // 数据结果仍保持NPU1.0定义的低32位回绕；overflow只负责报告数值事件。
+    assign overflow = ~(sum_in[31] ^ bias_in[31])
+                    &  (biased_sum_out[31] ^ sum_in[31]);
 endmodule

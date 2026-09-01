@@ -15,9 +15,14 @@ Python输入生成器 ──→ Python golden model ──→ expected
 
 ## 测试分层
 
-1. `tests/test_golden_model.py`检查打包、矩阵次序、Bias广播、舍入、饱和和回绕规则；
+1. `tests/test_golden_model.py`检查打包、矩阵次序、Bias广播、舍入、饱和、回绕和溢出规则；
 2. `generate_vectors.py`生成12个定向用例和默认1000个随机用例；
-3. `XingHuo_NPU_sim.cpp`连续执行所有用例，验证握手和数据通路不会跨任务污染。
+3. `XingHuo_NPU_sim.cpp`连续执行所有用例，同时比较结果、错误码、6周期延迟和累计任务数；
+4. `verification/XingHuo_NPU_assertions.sv`用SVA检查周期级协议不变量；
+5. `verification/XingHuo_NPU_sva_tb.sv`定向触发正常任务、重复start和错误清除。
+
+正式RTL继续使用IEEE Verilog-2005。SVA单独放在`verification/`，只用SystemVerilog
+验证工具编译，不进入`filelists/rtl.f`或综合流程。
 
 随机生成器使用固定seed。复现某次测试：
 
@@ -35,6 +40,7 @@ python3 -m unittest discover -s tests -v
 make lint
 make vectors
 make sim
+make sva-test
 make test
 ```
 

@@ -14,10 +14,12 @@ XingHuo_NPU
 ├── MatrixFeeder      按传播距离错开A和W的注入时刻
 ├── SystolicArray
 │   └── MacPE × 4     传播操作数并在本地保存INT32部分和
-└── VPU
-    ├── Bias × 4      按列加INT32 Bias
-    ├── Requantize ×4 右移舍入并饱和为INT8
-    └── ReLU ×4       清零负数
+├── VPU
+│   ├── Bias × 4      按列加INT32 Bias
+│   ├── Requantize ×4 右移舍入并饱和为INT8
+│   └── ReLU ×4       清零负数
+├── Error Monitor     记录重复start和Bias溢出
+└── Performance Monitor 记录最近周期数和累计任务数
 ```
 
 数据通路由`MatrixFeeder → SystolicArray → VPU`组成，控制通路由`ControlUnit`组成。
@@ -39,3 +41,14 @@ IDLE → CLEAR → RUN(phase 0,1,2,3) → WRITE_RESULT → IDLE
 
 输入矩阵、Bias和`quant_shift`应从任务被接受前保持到`done`出现。当前设计没有内部
 输入缓冲区，也不支持任务队列。
+
+## NPU1.1可观测性通路
+
+```text
+start + busy ───────────────→ START_WHILE_BUSY粘滞位
+Bias四路加法溢出 ──────────→ BIAS_OVERFLOW粘滞位
+busy + done ────────────────→ cycle_count / task_count
+```
+
+`Bias`模块同时输出32位回绕结果和溢出标志，VPU将四路标志归约后交给顶层。错误
+监控不会修改数据结果或控制状态机，因此NPU1.1与NPU1.0的合法任务数值行为一致。
