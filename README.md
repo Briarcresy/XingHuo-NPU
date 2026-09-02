@@ -12,39 +12,44 @@ Requantization（重量化）→ INT8 Saturation（饱和）→ ReLU
 期望结果与Bias Overflow（溢出）状态；C++17 Testbench（测试平台）通过Verilator
 批量验证RTL，SVA保存在独立验证目录。
 
-## 当前开发版本：NPU1.2
+## 当前开发版本：NPU1.3
 
-`NPU1.2`继承NPU1.1的Error Monitor（错误监控）和Performance Counter（性能计数器），
-并为每个PE增加Active/Shadow Weight Bank（活动/影子权重存储组）。Core采用纯
-Weight-resident Mode（权重驻留模式），支持提前装载、Atomic Switch（原子切换）和
-跨任务Weight Reuse（权重复用）。
+`NPU1.3`继承NPU1.2的True Weight Stationary（真正的权重固定）Systolic Array
+（脉动阵列）、Active/Shadow Weight Bank（活动/影子权重存储组）、Error Monitor
+（错误监控）和Performance Counter（性能计数器）。本版本将Requantization（重量化）
+从Round-to-nearest（就近舍入）简化为直接Arithmetic Right Shift（算术右移），删除
+四路重量化路径中的舍入偏置和33位舍入加法器，以更简单的数值规则换取更小的硬件开销。
 
 ## 核心指标
 
-| 指标                 | NPU1.0基线        | NPU1.1可观测性版 | NPU1.2权重驻留版       |
+| 指标                 | NPU1.0基线        | NPU1.1可观测性版 | NPU1.2实测基线         |
 | -------------------- | ----------------- | ----------------- | ---------------------- |
 | 计算规模             | 2×2 INT8矩阵乘法  | 与NPU1.0相同      | 与NPU1.0相同           |
 | PE数量               | 4个               | 4个               | 4个                    |
-| 权重模式             | Direct（直接）    | Direct（直接）    | Weight-resident（权重驻留） |
+| 数据流               | Output Stationary | Output Stationary | True Weight Stationary |
 | 可观测性             | `busy`、`done`    | 错误与性能计数    | 增加权重bank状态       |
 | PPA目标频率          | 300 MHz           | 100 MHz           | 100 MHz                |
-| 映射估算最高频率     | 高于300 MHz       | 约264.486 MHz     | 约261.597 MHz          |
-| 单次计算延迟         | 6周期，约20 ns    | 6周期，约60 ns    | 6周期，约60 ns         |
-| 连续任务启动间隔     | 7周期，约23.33 ns | 7周期，约70 ns    | 7周期，约70 ns         |
+| 映射估算最高频率     | 高于300 MHz       | 约264.486 MHz     | 约262.803 MHz          |
+| 单次计算延迟         | 6周期，约20 ns    | 6周期，约60 ns    | 7周期，约70 ns         |
+| 连续任务启动间隔     | 7周期，约23.33 ns | 7周期，约70 ns    | 8周期，约80 ns         |
 | 100 MHz理论峰值算力  | —                 | 0.4 GMAC/s        | 0.4 GMAC/s             |
-| 标准单元数量         | 5376              | 5705              | 5992（比NPU1.1多5.03%） |
-| 标准单元面积         | 10999.24 µm²      | 11703.44 µm²      | 12727.68 µm²（多8.75%） |
-| 时序单元面积         | 1536.92 µm²       | 2054.36 µm²       | 2469.88 µm²，占19.41%  |
-| 建立/保持WNS         | +0.063/+0.140 ns  | +6.219/+0.113 ns  | +6.177/+0.138 ns       |
+| 当前调度有效算力     | —                 | 约0.057 GMAC/s    | 约0.050 GMAC/s         |
+| 标准单元数量         | 5376              | 5705              | 5634（比NPU1.1少1.24%） |
+| 标准单元面积         | 10999.24 µm²      | 11703.44 µm²      | 11506.32 µm²（少1.68%） |
+| 时序单元面积         | 1536.92 µm²       | 2054.36 µm²       | 2579.64 µm²，占22.42%  |
+| 建立/保持WNS         | +0.063/+0.140 ns  | +6.219/+0.113 ns  | +6.195/+0.111 ns       |
 | 建立/保持TNS         | 0/0 ns            | 0/0 ns            | 0/0 ns                 |
-| 粗略功耗估算         | 3.799 W           | 2.026 W           | 1.606 W                |
+| 粗略功耗估算         | 3.799 W           | 2.026 W           | 0.298 W                |
 | 顶层信号位数         | 170位             | 228位             | 232位                  |
 | Verilator批量用例    | 1012例            | 1012例            | 1016例及独立SVA        |
 
-NPU1.2在100 MHz下Setup/Hold Check（建立/保持检查）均通过。相比NPU1.1，面积增加
-约8.75%；现有Output Stationary（输出驻留）结构要求每个PE保存两个K方向权重，两套
-Active/Shadow Bank在四个PE中共增加128位寄存器。砍掉Direct Weight Datapath后，
-面积比兼容双模式版本减少约2.30%。功耗没有真实VCD/SAIF，只能作为粗略参考。
+NPU1.2在100 MHz下Setup/Hold Check（建立/保持检查）均通过。每个PE只保存一个Active
+和一个Shadow Weight，权重寄存器共64位；Activation纵向传播，INT32 Partial Sum横向
+传播。相比此前Output Stationary + Weight-resident版本，面积减少约9.60%，但新增
+Result Collector使单任务多一个周期。功耗没有真实VCD/SAIF，只能作为粗略参考。
+
+NPU1.3不改变阵列数据流、接口和任务周期数。上表面积、频率和功耗仍是NPU1.2的实测
+基线；NPU1.3删除舍入逻辑后的PPA变化需要重新运行统一的100 MHz流程后才能填写。
 
 PPA数据来自ICS55 RVT、TT、1.2 V、25 ℃条件下的Yosys门级映射和iEDA分析。面积是
 标准单元面积，不是最终Die面积；功耗使用统一的0.1默认翻转率且没有真实VCD/SAIF、
@@ -54,8 +59,10 @@ PPA数据来自ICS55 RVT、TT、1.2 V、25 ℃条件下的Yosys门级映射和iE
 
 - `NPU1.0`：完成2×2 INT8推理数据通路和基础验证；
 - `NPU1.1`：增加Sticky Error（粘滞错误）、Bias Overflow、Performance Counter和SVA；
-- `NPU1.2`：采用纯Weight-resident Mode，增加Active/Shadow Weight Bank、Atomic Switch
-  和Weight Reuse。
+- `NPU1.2`：采用True Weight Stationary数据流，增加Active/Shadow Weight Bank、
+  Partial Sum Pipeline、Result Collector、Atomic Switch和Weight Reuse。
+- `NPU1.3`：Requantization改为直接Arithmetic Right Shift，删除舍入偏置与舍入加法器，
+  并同步Golden Model、定向测试和量化文档。
 
 ## 目录结构
 
@@ -143,7 +150,8 @@ make clean
 - 单次乘法产生完整INT16结果；
 - PE使用INT32 Accumulator（累加器）；
 - Bias是与累加值同尺度的INT32，并按输出列广播；
-- `quant_shift`实现2的幂缩放、Round-to-nearest（就近舍入）和INT8 Saturation；
+- `quant_shift`通过直接Arithmetic Right Shift（算术右移）实现2的幂缩放，
+  随后执行INT8 Saturation；
 - ReLU将负数输出变为0；
 - Activation、Weight和输出zero-point固定为0。
 
@@ -166,6 +174,7 @@ XingHuo_NPU
 ├── MatrixFeeder
 ├── SystolicArray
 │   └── MacPE × 4（每个PE含active/shadow权重bank）
+├── ResultCollector
 └── VPU
     ├── Bias × 4
     ├── Requantize × 4

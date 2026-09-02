@@ -23,17 +23,18 @@ NPU1.1会检测`INT32 accumulator + INT32 bias`的数学结果是否超出INT32�
 缩放，zero-point固定为0：
 
 ```text
-if quant_shift == 0:
-    shifted = biased_sum
-else:
-    shifted = (biased_sum + 2^(quant_shift-1)) >>> quant_shift
+shifted = biased_sum >>> quant_shift
 
 quantized = saturate_to_int8(shifted)
 result = max(0, quantized)
 ```
 
-`>>>`是算术右移。加半个量化步长实现就近舍入，恰好位于半值时向正方向舍入。
-例如右移1位时：`1→1`、`-1→0`、`-3→-1`。
+`>>>`是Arithmetic Right Shift（算术右移）。移出的低位直接丢弃，不添加舍入偏置。
+对于非负数相当于向零截断，对于负数则向负无穷取整。例如右移1位时：
+`1→0`、`3→1`、`-1→-1`、`-3→-2`。
+
+这种规则减少了33位舍入加法器，硬件更简单；代价是相较Round-to-nearest
+（就近舍入）具有更大的量化误差。软件Golden Model必须使用相同规则。
 
 ## 当前限制
 

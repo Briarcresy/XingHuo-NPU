@@ -5,6 +5,7 @@ src/MacPE.v
 src/MatrixFeeder.v
 src/ReLU.v
 src/Requantize.v
+src/ResultCollector.v
 src/SystolicArray.v
 src/VPU.v
 src/XingHuo_NPU.v

@@ -67,7 +67,7 @@ module VPU (
         .overflow(bias_overflow_11)
     );
 
-    // 第二阶段：统一进行右移、舍入和INT8饱和。
+    // 第二阶段：统一进行直接算术右移和INT8饱和。
     Requantize requantize_00 (
         .data_in(biased_sum_00), .shift(quant_shift), .data_out(requantized_00)
     );

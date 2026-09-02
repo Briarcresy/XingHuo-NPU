@@ -15,6 +15,5 @@ module Bias (
 
     // Two's-complement Overflow（二补码溢出）：两个操作数同号，但结果与操作数异号。
     // 数据结果仍保持NPU1.0定义的低32位回绕；overflow只负责报告数值事件。
-    assign overflow = ~(sum_in[31] ^ bias_in[31])
-                    &  (biased_sum_out[31] ^ sum_in[31]);
+    assign overflow = ~(sum_in[31] ^ bias_in[31]) & (biased_sum_out[31] ^ sum_in[31]);
 endmodule

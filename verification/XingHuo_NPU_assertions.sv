@@ -35,10 +35,10 @@ module XingHuo_NPU_assertions (
         (start && busy) |=> error_code[0])
         else $error("start while busy was not reported");
 
-    // 当前2x2实现的最近任务周期数固定为6；计数器在done后的时钟沿锁存。
+    // True Weight Stationary实现包含COLLECT阶段，最近任务周期数固定为7。
     assert property (@(posedge clk) disable iff (rst)
-        done |=> cycle_count == 16'd6)
-        else $error("completed task cycle count is not 6");
+        done |=> cycle_count == 16'd7)
+        else $error("completed task cycle count is not 7");
 
     // 每个done只把累计任务数增加一次。
     assert property (@(posedge clk) disable iff (rst)

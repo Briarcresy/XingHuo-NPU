@@ -5,7 +5,7 @@
 // A/W/Y均为2x2；Bias按列广播；zero-point固定为0。
 //
 // 顶层只连接各功能模块，不在这里实现具体算法：
-// control -> feeder -> systolic array -> VPU。
+// control -> feeder -> systolic array -> result collector -> VPU。
 module XingHuo_NPU (
     input clk,
     input rst,
@@ -46,9 +46,14 @@ module XingHuo_NPU (
     wire               array_step;
     wire               result_write_enable;
 
-    // Feeder到Systolic Array（脉动阵列）的四路边界数据。
-    wire signed [7:0] a_left_row0;
-    wire signed [7:0] a_left_row1;
+    wire signed [7:0] activation_top_col0;
+    wire signed [7:0] activation_top_col1;
+    wire activation_valid_col0;
+    wire activation_valid_col1;
+    wire signed [31:0] result_col0_stream;
+    wire signed [31:0] result_col1_stream;
+    wire result_col0_valid;
+    wire result_col1_valid;
 
     // Systolic Array保存的四个32位输出Partial Sum（部分和）。
     wire signed [31:0] sum00;
@@ -93,8 +98,10 @@ module XingHuo_NPU (
     MatrixFeeder matrix_feeder (
         .phase(phase),
         .activation_matrix(activation_matrix),
-        .a_left_row0(a_left_row0),
-        .a_left_row1(a_left_row1)
+        .activation_top_col0(activation_top_col0),
+        .activation_top_col1(activation_top_col1),
+        .activation_valid_col0(activation_valid_col0),
+        .activation_valid_col1(activation_valid_col1)
     );
 
     SystolicArray systolic_array (
@@ -102,12 +109,27 @@ module XingHuo_NPU (
         .rst(rst),
         .clear(array_clear),
         .step(array_step),
-        .phase(phase),
         .weight_load(weight_load),
         .weight_switch(weight_switch_commit),
         .weight_matrix(weight_matrix),
-        .a_left_row0(a_left_row0),
-        .a_left_row1(a_left_row1),
+        .activation_top_col0(activation_top_col0),
+        .activation_top_col1(activation_top_col1),
+        .activation_valid_col0(activation_valid_col0),
+        .activation_valid_col1(activation_valid_col1),
+        .result_col0_stream(result_col0_stream),
+        .result_col0_valid(result_col0_valid),
+        .result_col1_stream(result_col1_stream),
+        .result_col1_valid(result_col1_valid)
+    );
+
+    ResultCollector result_collector (
+        .clk(clk),
+        .rst(rst),
+        .clear(array_clear),
+        .result_col0_stream(result_col0_stream),
+        .result_col0_valid(result_col0_valid),
+        .result_col1_stream(result_col1_stream),
+        .result_col1_valid(result_col1_valid),
         .sum00(sum00),
         .sum01(sum01),
         .sum10(sum10),

@@ -16,10 +16,10 @@ Python输入生成器 ──→ Python golden model ──→ expected
 
 ## 测试分层
 
-1. `tests/test_golden_model.py`检查打包、矩阵次序、Bias广播、Rounding（舍入）、
+1. `tests/test_golden_model.py`检查打包、矩阵次序、Bias广播、Arithmetic Right Shift（算术右移）、
    Saturation（饱和）、Wraparound（回绕）和Overflow（溢出）规则；
 2. `generate_vectors.py`生成16个定向用例和默认1000个随机用例；
-3. `XingHuo_NPU_sim.cpp`连续执行所有用例，同时比较结果、错误码、6周期延迟和累计任务数；
+3. `XingHuo_NPU_sim.cpp`连续执行所有用例，同时比较结果、错误码、7周期延迟和累计任务数；
 4. `verification/XingHuo_NPU_assertions.sv`用SVA检查周期级协议不变量；
 5. `verification/XingHuo_NPU_sva_tb.sv`定向触发错误状态、权重装载、切换和驻留计算。
 

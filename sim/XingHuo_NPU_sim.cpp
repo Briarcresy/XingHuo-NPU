@@ -14,7 +14,7 @@ namespace {
 
 constexpr int kMaximumWaitCycles = 32;
 constexpr int kMaximumReportedFailures = 10;
-constexpr std::uint16_t kExpectedCoreCycles = 6;
+constexpr std::uint16_t kExpectedCoreCycles = 7;
 constexpr std::uint8_t kErrorStartWhileBusy = 1U << 0;
 constexpr std::uint8_t kErrorSwitchWhileBusy = 1U << 2;
 constexpr std::uint8_t kErrorStartWithoutWeight = 1U << 3;

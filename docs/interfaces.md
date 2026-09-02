@@ -39,7 +39,7 @@
 `clear_error`不清除结果、`cycle_count`或`task_count`，也不会中断正在执行的任务。
 
 Bias溢出只报告数学结果超出INT32范围，不改变NPU1.0的数值规则：实际数据仍保留
-加法结果低32位，然后继续重量化和ReLU。当前2×2实现正常任务`cycle_count=6`；
+加法结果低32位，然后继续重量化和ReLU。当前2×2实现正常任务`cycle_count=7`；
 内部当前周期计数饱和于`16'hffff`，`task_count`按32位自然回绕。
 
 ## NPU1.2 Weight-resident Protocol（权重驻留协议）

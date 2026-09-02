@@ -1,7 +1,7 @@
 """星火NPU的纯Python功能参考模型。
 
 模型只实现公开的数值规格，不调用Verilator，也不读取RTL中间信号。Python整数没有
-固定位宽，因此本文件显式模拟INT8/INT32二补码、回绕、舍入、饱和和总线打包。
+固定位宽，因此本文件显式模拟INT8/INT32二补码、回绕、算术右移、饱和和总线打包。
 """
 
 from __future__ import annotations
@@ -110,14 +110,15 @@ def bias_add_int32(accumulator: int, bias: int) -> tuple[int, bool]:
 
 
 def requantize_int32(value: int, shift: int) -> int:
-    """匹配Requantize.v的加偏置、算术右移和INT8饱和。"""
+    """匹配Requantize.v的直接算术右移和INT8饱和。"""
     if not INT32_MIN <= value <= INT32_MAX:
         raise ValueError("重量化输入必须是INT32")
     if not 0 <= shift <= 31:
         raise ValueError("shift必须在0～31之间")
 
-    # Python负数右移就是算术右移，和Verilog的>>>一致。
-    shifted = value if shift == 0 else (value + (1 << (shift - 1))) >> shift
+    # Python负数右移向负无穷取整，与有符号Verilog表达式的>>>一致。
+    # shift为0时右移表达式自然返回原值，不需要单独处理。
+    shifted = value >> shift
     return max(INT8_MIN, min(INT8_MAX, shifted))
 
 

@@ -38,11 +38,11 @@ class GoldenModelTest(unittest.TestCase):
         self.assertEqual(requantize_int32(126, 0), 126)
         self.assertEqual(requantize_int32(-127, 0), -127)
 
-    def test_rounding_boundaries(self):
-        self.assertEqual(requantize_int32(1, 1), 1)
+    def test_arithmetic_shift_boundaries(self):
+        self.assertEqual(requantize_int32(1, 1), 0)
         self.assertEqual(requantize_int32(2, 1), 1)
-        self.assertEqual(requantize_int32(-1, 1), 0)
-        self.assertEqual(requantize_int32(-3, 1), -1)
+        self.assertEqual(requantize_int32(-1, 1), -1)
+        self.assertEqual(requantize_int32(-3, 1), -2)
 
     def test_int8_saturation(self):
         self.assertEqual(requantize_int32(1000, 0), 127)
