@@ -30,9 +30,10 @@ module XingHuo_NPU (
     // 四个INT8结果从低位到高位依次为00、01、10、11。
     output [31:0] result_matrix,
 
-    // NPU1.1/1.2可观测性接口；各错误位定义见docs/interfaces.md。
+    // 可观测性接口；各错误位定义见docs/interfaces.md。
     output       error,
-    output [7:0] error_code,
+    // 5个错误事件各占一位，不保留没有实际含义的高位。
+    output [4:0] error_code,
     output       active_weight_valid,
     output       shadow_weight_valid,
     // 最近一个成功任务从接受start到产生done所经历的Core工作周期数。
@@ -78,7 +79,7 @@ module XingHuo_NPU (
     assign weight_switch_commit = weight_switch && !busy && shadow_weight_valid_reg;
     assign active_weight_valid = active_weight_valid_reg;
     assign shadow_weight_valid = shadow_weight_valid_reg;
-    assign error_code = {3'd0, weight_switch_empty_error, start_without_weight_error,
+    assign error_code = {weight_switch_empty_error, start_without_weight_error,
                          weight_switch_busy_error, bias_overflow_error,
                          start_while_busy_error};
     assign error      = |error_code;

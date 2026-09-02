@@ -16,7 +16,7 @@ module XingHuo_NPU_sva_tb;
     wire done;
     wire [31:0] result_matrix;
     wire error;
-    wire [7:0] error_code;
+    wire [4:0] error_code;
     wire [15:0] cycle_count;
     wire [31:0] task_count;
     wire active_weight_valid;
@@ -100,7 +100,7 @@ module XingHuo_NPU_sva_tb;
         clear_error = 1'b0;
         @(posedge clk);
         #1ns;
-        if (error || error_code != 8'd0)
+        if (error || error_code != 5'd0)
             $fatal(1, "clear_error did not clear sticky status");
 
         // 不重新加载权重，再次使用Active Weight验证Weight Reuse（权重复用）。

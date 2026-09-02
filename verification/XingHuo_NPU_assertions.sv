@@ -11,7 +11,7 @@ module XingHuo_NPU_assertions (
     input logic        busy,
     input logic        done,
     input logic        error,
-    input logic [7:0]  error_code,
+    input logic [4:0]  error_code,
     input logic [15:0] cycle_count,
     input logic [31:0] task_count,
     input logic        active_weight_valid,
@@ -44,10 +44,6 @@ module XingHuo_NPU_assertions (
     assert property (@(posedge clk) disable iff (rst)
         done |=> task_count == ($past(task_count) + 1'b1))
         else $error("task_count did not increment after done");
-
-    // NPU1.2定义低五位，保留位必须一直为0。
-    assert property (@(posedge clk) error_code[7:5] == 3'd0)
-        else $error("reserved error bits are non-zero");
 
     // clear_error本身不允许改变busy，也不承担任务复位功能。
     assert property (@(posedge clk) disable iff (rst)

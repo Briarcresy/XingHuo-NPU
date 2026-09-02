@@ -57,6 +57,7 @@ NPU1.3不改变阵列数据流、接口和任务周期数。删除舍入逻辑�
 | 组合逻辑面积         | 8926.68 µm²    | 7525.28 µm²    | 约减少15.70%          |
 | 时序单元面积         | 2579.64 µm²    | 2579.64 µm²    | 不变                  |
 | 时序单元面积占比     | 22.42%         | 25.53%         | 因组合逻辑减少而上升  |
+| 顶层信号位数         | 232位          | 229位          | 删除3个恒零保留位     |
 | Setup WNS            | +6.195 ns      | +6.674 ns      | 改善0.479 ns          |
 | Hold WNS             | +0.111 ns      | +0.111 ns      | 不变                  |
 | Setup/Hold TNS       | 0/0 ns         | 0/0 ns         | 均无违例              |
@@ -77,8 +78,8 @@ PPA数据来自ICS55 RVT、TT、1.2 V、25 ℃、100 MHz约束下的Yosys门级�
 - `NPU1.1`：增加Sticky Error（粘滞错误）、Bias Overflow、Performance Counter和SVA；
 - `NPU1.2`：采用True Weight Stationary数据流，增加Active/Shadow Weight Bank、
   Partial Sum Pipeline、Result Collector、Atomic Switch和Weight Reuse。
-- `NPU1.3`：Requantization改为直接Arithmetic Right Shift，删除舍入偏置与舍入加法器，
-  并同步Golden Model、定向测试和量化文档。
+- `NPU1.3`：Requantization改为直接Arithmetic Right Shift，删除舍入偏置与舍入加法器；
+  `error_code`从8位缩减为全部有效的5位，并同步Golden Model、验证和文档。
 
 ## 目录结构
 

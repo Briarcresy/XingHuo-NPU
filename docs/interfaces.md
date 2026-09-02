@@ -18,7 +18,7 @@
 | `done` | 输出 | 1 | 结果写回完成，保持一个周期 |
 | `result_matrix` | 输出 | 32 | 2×2 ReLU后INT8结果 |
 | `error` | 输出 | 1 | `error_code`任意位非0 |
-| `error_code` | 输出 | 8 | NPU1.1/1.2 Sticky Error Code（粘滞错误码） |
+| `error_code` | 输出 | 5 | Sticky Error Code（粘滞错误码），每一位均有定义 |
 | `active_weight_valid` | 输出 | 1 | Active Weight Bank已经准备好 |
 | `shadow_weight_valid` | 输出 | 1 | Shadow Weight Bank包含待切换权重 |
 | `cycle_count` | 输出 | 16 | 最近一个完成任务的Core周期数 |
@@ -33,7 +33,6 @@
 | 2 | `WEIGHT_SWITCH_WHILE_BUSY` | 计算期间请求切换active权重，切换被拒绝 |
 | 3 | `START_WITHOUT_ACTIVE_WEIGHT` | 驻留模式无有效active权重时启动，任务被拒绝 |
 | 4 | `WEIGHT_SWITCH_WITHOUT_SHADOW` | shadow无效时请求切换，切换被拒绝 |
-| 7:5 | 保留 | 固定为0 |
 
 错误位是粘滞的：事件消失后仍保持为1，直到`clear_error=1`的时钟沿或`rst=1`。
 `clear_error`不清除结果、`cycle_count`或`task_count`，也不会中断正在执行的任务。
