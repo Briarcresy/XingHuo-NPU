@@ -1,1 +1,1 @@
-"""星火NPU的软件参考模型与仿真工具。"""
+"""星火NPU的Software Reference Model（软件参考模型）与仿真工具。"""

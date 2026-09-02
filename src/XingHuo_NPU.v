@@ -5,13 +5,17 @@
 // A/W/Y均为2x2；Bias按列广播；zero-point固定为0。
 //
 // 顶层只连接各功能模块，不在这里实现具体算法：
-// control -> feeder -> systolic array -> VPU。
+// control -> feeder -> systolic array -> result collector -> VPU。
 module XingHuo_NPU (
     input clk,
     input rst,
     input start,
-    // 清除粘滞错误标志；不影响当前计算、结果和性能计数器。
+    // 清除Sticky Error（粘滞错误）；不影响当前计算、结果和Performance Counter。
     input clear_error,
+    // NPU1.2 Weight-resident（权重驻留）接口：weight_load写入各PE的Shadow Bank；
+    // weight_switch在空闲时执行整组Atomic Switch（原子切换）到Active Bank。
+    input weight_load,
+    input weight_switch,
 
     // A和W每个元素为8位有符号INT8，从低位到高位依次为00、01、10、11。
     input [31:0] activation_matrix,
@@ -26,10 +30,11 @@ module XingHuo_NPU (
     // 四个INT8结果从低位到高位依次为00、01、10、11。
     output [31:0] result_matrix,
 
-    // NPU1.1可观测性接口。error_code[0]表示busy期间收到start；
-    // error_code[1]表示至少一路Bias INT32加法发生二补码溢出，其余位保留为0。
+    // NPU1.1/1.2可观测性接口；各错误位定义见docs/interfaces.md。
     output       error,
     output [7:0] error_code,
+    output       active_weight_valid,
+    output       shadow_weight_valid,
     // 最近一个成功任务从接受start到产生done所经历的Core工作周期数。
     output reg [15:0] cycle_count,
     // 复位以来成功完成的任务总数；自然按32位回绕。
@@ -41,13 +46,16 @@ module XingHuo_NPU (
     wire               array_step;
     wire               result_write_enable;
 
-    // Feeder 到脉动阵列的四路边界数据。
-    wire signed [7:0] a_left_row0;
-    wire signed [7:0] a_left_row1;
-    wire signed [7:0] w_top_col0;
-    wire signed [7:0] w_top_col1;
+    wire signed [7:0] activation_top_col0;
+    wire signed [7:0] activation_top_col1;
+    wire activation_valid_col0;
+    wire activation_valid_col1;
+    wire signed [31:0] result_col0_stream;
+    wire signed [31:0] result_col1_stream;
+    wire result_col0_valid;
+    wire result_col1_valid;
 
-    // 脉动阵列保存的四个 32 位输出部分和。
+    // Systolic Array保存的四个32位输出Partial Sum（部分和）。
     wire signed [31:0] sum00;
     wire signed [31:0] sum01;
     wire signed [31:0] sum10;
@@ -56,15 +64,29 @@ module XingHuo_NPU (
 
     reg start_while_busy_error;
     reg bias_overflow_error;
+    reg weight_switch_busy_error;
+    reg start_without_weight_error;
+    reg weight_switch_empty_error;
     reg [15:0] current_cycle_count;
+    reg active_weight_valid_reg;
+    reg shadow_weight_valid_reg;
 
-    assign error_code = {6'd0, bias_overflow_error, start_while_busy_error};
+    wire accepted_start;
+    wire weight_switch_commit;
+
+    assign accepted_start = start && active_weight_valid_reg;
+    assign weight_switch_commit = weight_switch && !busy && shadow_weight_valid_reg;
+    assign active_weight_valid = active_weight_valid_reg;
+    assign shadow_weight_valid = shadow_weight_valid_reg;
+    assign error_code = {3'd0, weight_switch_empty_error, start_without_weight_error,
+                         weight_switch_busy_error, bias_overflow_error,
+                         start_while_busy_error};
     assign error      = |error_code;
 
     ControlUnit control_unit (
         .clk(clk),
         .rst(rst),
-        .start(start),
+        .start(accepted_start),
         .busy(busy),
         .done(done),
         .phase(phase),
@@ -76,11 +98,10 @@ module XingHuo_NPU (
     MatrixFeeder matrix_feeder (
         .phase(phase),
         .activation_matrix(activation_matrix),
-        .weight_matrix(weight_matrix),
-        .a_left_row0(a_left_row0),
-        .a_left_row1(a_left_row1),
-        .w_top_col0(w_top_col0),
-        .w_top_col1(w_top_col1)
+        .activation_top_col0(activation_top_col0),
+        .activation_top_col1(activation_top_col1),
+        .activation_valid_col0(activation_valid_col0),
+        .activation_valid_col1(activation_valid_col1)
     );
 
     SystolicArray systolic_array (
@@ -88,10 +109,27 @@ module XingHuo_NPU (
         .rst(rst),
         .clear(array_clear),
         .step(array_step),
-        .a_left_row0(a_left_row0),
-        .a_left_row1(a_left_row1),
-        .w_top_col0(w_top_col0),
-        .w_top_col1(w_top_col1),
+        .weight_load(weight_load),
+        .weight_switch(weight_switch_commit),
+        .weight_matrix(weight_matrix),
+        .activation_top_col0(activation_top_col0),
+        .activation_top_col1(activation_top_col1),
+        .activation_valid_col0(activation_valid_col0),
+        .activation_valid_col1(activation_valid_col1),
+        .result_col0_stream(result_col0_stream),
+        .result_col0_valid(result_col0_valid),
+        .result_col1_stream(result_col1_stream),
+        .result_col1_valid(result_col1_valid)
+    );
+
+    ResultCollector result_collector (
+        .clk(clk),
+        .rst(rst),
+        .clear(array_clear),
+        .result_col0_stream(result_col0_stream),
+        .result_col0_valid(result_col0_valid),
+        .result_col1_stream(result_col1_stream),
+        .result_col1_valid(result_col1_valid),
         .sum00(sum00),
         .sum01(sum01),
         .sum10(sum10),
@@ -112,19 +150,44 @@ module XingHuo_NPU (
         .bias_overflow(bias_overflow)
     );
 
-    // 错误位采用粘滞语义：事件发生后保持为1，直到clear_error或复位。
+    // 错误位采用Sticky（粘滞）语义：事件发生后保持为1，直到clear_error或复位。
     // 重复start不会打断正在执行的任务，ControlUnit会继续原有计算。
     always @(posedge clk or posedge rst) begin
         if (rst) begin
             start_while_busy_error <= 1'b0;
             bias_overflow_error    <= 1'b0;
+            weight_switch_busy_error <= 1'b0;
+            start_without_weight_error <= 1'b0;
+            weight_switch_empty_error <= 1'b0;
         end else begin
             if (clear_error) begin
                 start_while_busy_error <= 1'b0;
                 bias_overflow_error    <= 1'b0;
+                weight_switch_busy_error <= 1'b0;
+                start_without_weight_error <= 1'b0;
+                weight_switch_empty_error <= 1'b0;
             end
             if (start && busy) start_while_busy_error <= 1'b1;
             if (result_write_enable && bias_overflow) bias_overflow_error <= 1'b1;
+            if (weight_switch && busy) weight_switch_busy_error <= 1'b1;
+            if (start && !busy && !active_weight_valid_reg)
+                start_without_weight_error <= 1'b1;
+            if (weight_switch && !busy && !shadow_weight_valid_reg)
+                weight_switch_empty_error <= 1'b1;
+        end
+    end
+
+    // Valid Bit（有效位）描述两个Weight Bank的所有权。load与合法switch可以同拍：
+    // 旧Shadow切换为Active，同时weight_matrix成为新Shadow，便于流水准备下一组权重。
+    always @(posedge clk or posedge rst) begin
+        if (rst) begin
+            active_weight_valid_reg <= 1'b0;
+            shadow_weight_valid_reg <= 1'b0;
+        end else begin
+            if (weight_switch_commit) active_weight_valid_reg <= 1'b1;
+
+            if (weight_load) shadow_weight_valid_reg <= 1'b1;
+            else if (weight_switch_commit) shadow_weight_valid_reg <= 1'b0;
         end
     end
 
@@ -136,7 +199,7 @@ module XingHuo_NPU (
             cycle_count         <= 16'd0;
             task_count          <= 32'd0;
         end else begin
-            if (start && !busy) current_cycle_count <= 16'd0;
+            if (accepted_start && !busy) current_cycle_count <= 16'd0;
             else if (busy && current_cycle_count != 16'hffff)
                 current_cycle_count <= current_cycle_count + 1'b1;
 

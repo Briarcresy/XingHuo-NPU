@@ -4,48 +4,65 @@
 通路为：
 
 ```text
-INT8矩阵乘法 → INT32累加 → INT32 Bias → 重量化 → INT8饱和 → ReLU
+INT8矩阵乘法 → INT32 Accumulation（累加）→ INT32 Bias →
+Requantization（重量化）→ INT8 Saturation（饱和）→ ReLU
 ```
 
-正式RTL严格使用IEEE Verilog-2005；Python golden model独立计算期望结果与Bias
-溢出状态；C++17 testbench通过Verilator批量验证RTL，SVA保存在独立验证目录。
+正式RTL严格使用IEEE Verilog-2005；Python Golden Model（黄金参考模型）独立计算
+期望结果与Bias Overflow（溢出）状态；C++17 Testbench（测试平台）通过Verilator
+批量验证RTL，SVA保存在独立验证目录。
 
-## 当前开发版本：NPU1.1
+## 当前开发版本：NPU1.3
 
-`NPU1.1`在NPU1.0数值数据通路不变的基础上增加可清除的粘滞错误、Bias加法
-溢出检测、最近任务周期计数、累计任务计数和独立SVA验证。
+`NPU1.3`继承NPU1.2的True Weight Stationary（真正的权重固定）Systolic Array
+（脉动阵列）、Active/Shadow Weight Bank（活动/影子权重存储组）、Error Monitor
+（错误监控）和Performance Counter（性能计数器）。本版本将Requantization（重量化）
+从Round-to-nearest（就近舍入）简化为直接Arithmetic Right Shift（算术右移），删除
+四路重量化路径中的舍入偏置和33位舍入加法器，以更简单的数值规则换取更小的硬件开销。
 
 ## 核心指标
 
-| 指标                   | NPU1.0基线                                      | NPU1.1当前版本                                  |
-| ---------------------- | ----------------------------------------------- | ----------------------------------------------- |
-| 计算规模               | 2×2 INT8矩阵乘法                                | 2×2 INT8矩阵乘法                                |
-| PE数量                 | 4个                                             | 4个                                             |
-| 数据精度               | INT8输入、INT16乘积、INT32累加与Bias、INT8输出  | 与NPU1.0相同                                    |
-| 激活与重量化           | ReLU、对称2次幂右移量化                         | 与NPU1.0相同                                    |
-| 可观测性               | `busy`、`done`                                  | 粘滞错误、错误码、周期计数、累计任务计数        |
-| PPA目标频率            | 300 MHz                                         | 100 MHz                                         |
-| 当前映射估算最高频率   | 高于300 MHz                                     | 约264.486 MHz                                   |
-| 单次任务延迟           | 6周期，约20 ns                                  | 6周期，约60 ns                                  |
-| 连续任务启动间隔       | 7周期，约23.33 ns                               | 7周期，约70 ns                                  |
-| 理论峰值算力           | 1.2 GMAC/s，即2.4 GOPS                          | 0.4 GMAC/s，即0.8 GOPS                          |
-| 当前调度的持续有效算力 | 约0.343 GMAC/s，即0.686 GOPS                    | 约0.114 GMAC/s，即0.229 GOPS                    |
-| 标准单元数量           | 5376个                                          | 5705个（增加约6.12%）                           |
-| 标准单元面积           | 10999.24 µm²，约0.011 mm²                       | 11703.44 µm²，约0.0117 mm²（增加约6.40%）       |
-| 时序单元面积           | 1536.92 µm²，占13.97%                           | 2054.36 µm²，占17.55%                           |
-| 建立/保持时间WNS       | +0.063 ns / +0.140 ns                           | +6.219 ns / +0.113 ns                           |
-| 建立/保持时间TNS       | 0 ns / 0 ns                                     | 0 ns / 0 ns                                     |
-| 粗略功耗估算           | 3.799 W                                         | 2.026 W                                         |
-| 顶层信号位数           | 170位，不含电源和地                             | 228位，不含电源和地                             |
-| 自动验证规模           | 10项Python单元测试、1012例Verilator测试         | 11项Python、1012例Verilator及独立SVA测试        |
+| 指标                 | NPU1.0基线        | NPU1.1可观测性版 | NPU1.2实测基线         |
+| -------------------- | ----------------- | ----------------- | ---------------------- |
+| 计算规模             | 2×2 INT8矩阵乘法  | 与NPU1.0相同      | 与NPU1.0相同           |
+| PE数量               | 4个               | 4个               | 4个                    |
+| 数据流               | Output Stationary | Output Stationary | True Weight Stationary |
+| 可观测性             | `busy`、`done`    | 错误与性能计数    | 增加权重bank状态       |
+| PPA目标频率          | 300 MHz           | 100 MHz           | 100 MHz                |
+| 映射估算最高频率     | 高于300 MHz       | 约264.486 MHz     | 约262.803 MHz          |
+| 单次计算延迟         | 6周期，约20 ns    | 6周期，约60 ns    | 7周期，约70 ns         |
+| 连续任务启动间隔     | 7周期，约23.33 ns | 7周期，约70 ns    | 8周期，约80 ns         |
+| 100 MHz理论峰值算力  | —                 | 0.4 GMAC/s        | 0.4 GMAC/s             |
+| 当前调度有效算力     | —                 | 约0.057 GMAC/s    | 约0.050 GMAC/s         |
+| 标准单元数量         | 5376              | 5705              | 5634（比NPU1.1少1.24%） |
+| 标准单元面积         | 10999.24 µm²      | 11703.44 µm²      | 11506.32 µm²（少1.68%） |
+| 时序单元面积         | 1536.92 µm²       | 2054.36 µm²       | 2579.64 µm²，占22.42%  |
+| 建立/保持WNS         | +0.063/+0.140 ns  | +6.219/+0.113 ns  | +6.195/+0.111 ns       |
+| 建立/保持TNS         | 0/0 ns            | 0/0 ns            | 0/0 ns                 |
+| 粗略功耗估算         | 3.799 W           | 2.026 W           | 0.298 W                |
+| 顶层信号位数         | 170位             | 228位             | 232位                  |
+| Verilator批量用例    | 1012例            | 1012例            | 1016例及独立SVA        |
 
-NPU1.1当前以100 MHz作为默认PPA目标，建立和保持检查均通过，当前映射结果估算最高
-频率约为264.486 MHz。该版本没有改变数值数据通路和固定的6周期调度延迟；相对NPU1.0
-基线的面积增长主要来自错误状态寄存器、周期计数器和32位任务计数器。
+NPU1.2在100 MHz下Setup/Hold Check（建立/保持检查）均通过。每个PE只保存一个Active
+和一个Shadow Weight，权重寄存器共64位；Activation纵向传播，INT32 Partial Sum横向
+传播。相比此前Output Stationary + Weight-resident版本，面积减少约9.60%，但新增
+Result Collector使单任务多一个周期。功耗没有真实VCD/SAIF，只能作为粗略参考。
+
+NPU1.3不改变阵列数据流、接口和任务周期数。上表面积、频率和功耗仍是NPU1.2的实测
+基线；NPU1.3删除舍入逻辑后的PPA变化需要重新运行统一的100 MHz流程后才能填写。
 
 PPA数据来自ICS55 RVT、TT、1.2 V、25 ℃条件下的Yosys门级映射和iEDA分析。面积是
 标准单元面积，不是最终Die面积；功耗使用统一的0.1默认翻转率且没有真实VCD/SAIF、
 布局布线和寄生参数，只适合比较不同RTL版本，不能作为最终芯片功耗。
+
+## 版本历史
+
+- `NPU1.0`：完成2×2 INT8推理数据通路和基础验证；
+- `NPU1.1`：增加Sticky Error（粘滞错误）、Bias Overflow、Performance Counter和SVA；
+- `NPU1.2`：采用True Weight Stationary数据流，增加Active/Shadow Weight Bank、
+  Partial Sum Pipeline、Result Collector、Atomic Switch和Weight Reuse。
+- `NPU1.3`：Requantization改为直接Arithmetic Right Shift，删除舍入偏置与舍入加法器，
+  并同步Golden Model、定向测试和量化文档。
 
 ## 目录结构
 
@@ -89,17 +106,17 @@ make lint
 make sim
 ```
 
-运行NPU1.1周期级断言：
+运行NPU1.2周期级断言：
 
 ```bash
 make sva-test
 ```
 
-默认生成12个定向用例和1000个固定种子随机用例。成功结果为：
+默认生成16个定向用例和1000个固定种子随机用例。成功结果为：
 
 ```text
-ALL 1012 TESTS PASSED
-directed=12 random=1000 seed=0x20260831
+ALL 1016 TESTS PASSED
+directed=16 random=1000 seed=0x20260831
 ```
 
 修改随机数量和种子：
@@ -131,9 +148,10 @@ make clean
 
 - Activation和Weight是有符号INT8；
 - 单次乘法产生完整INT16结果；
-- PE使用INT32累加器；
+- PE使用INT32 Accumulator（累加器）；
 - Bias是与累加值同尺度的INT32，并按输出列广播；
-- `quant_shift`实现2的幂缩放、就近舍入和INT8饱和；
+- `quant_shift`通过直接Arithmetic Right Shift（算术右移）实现2的幂缩放，
+  随后执行INT8 Saturation；
 - ReLU将负数输出变为0；
 - Activation、Weight和输出zero-point固定为0。
 
@@ -155,7 +173,8 @@ XingHuo_NPU
 ├── ControlUnit
 ├── MatrixFeeder
 ├── SystolicArray
-│   └── MacPE × 4
+│   └── MacPE × 4（每个PE含active/shadow权重bank）
+├── ResultCollector
 └── VPU
     ├── Bias × 4
     ├── Requantize × 4
@@ -194,7 +213,7 @@ make ppa \
 ## 当前限制
 
 - 固定2×2矩阵规模，没有可编程指令或片上Unified Buffer；
-- 输入在一次任务执行期间必须由外部保持稳定；
-- 只支持共享的2次幂重量化右移和固定ReLU；
+- 任务期间只需保持Activation、Bias和量化配置；Weight由PE内Active Bank提供；
+- 只支持共享的2次幂Requantization右移和固定ReLU；
 - 没有非零zero-point、逐通道量化、DMA、总线包装或SoC软件栈；
 - 基础SDC只约束时钟，封装确定前没有虚构IO delay、驱动和负载。

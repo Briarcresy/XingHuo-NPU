@@ -1,7 +1,7 @@
 `timescale 1ns / 1ps
 
-// INT8推理VPU（向量处理单元）。
-// 每路依次完成：INT32 Bias加法 -> 重量化到INT8 -> ReLU。
+// INT8推理Vector Processing Unit（向量处理单元，VPU）。
+// 每路依次完成：INT32 Bias加法 -> Requantization（重量化）到INT8 -> ReLU。
 // quant_shift由一层计算共用，以较小硬件代价实现2的幂量化缩放。
 module VPU (
     input                clk,
@@ -67,7 +67,7 @@ module VPU (
         .overflow(bias_overflow_11)
     );
 
-    // 第二阶段：统一进行右移、舍入和INT8饱和。
+    // 第二阶段：统一进行直接算术右移和INT8饱和。
     Requantize requantize_00 (
         .data_in(biased_sum_00), .shift(quant_shift), .data_out(requantized_00)
     );

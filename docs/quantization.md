@@ -4,9 +4,9 @@
 
 - Activation和Weight：有符号INT8，范围`-128～127`；
 - 单次乘积：完整有符号INT16；
-- PE累加器：有符号INT32；
+- PE Accumulator（累加器）：有符号INT32；
 - Bias：有符号INT32，并与累加器采用相同尺度；
-- 输出：重量化并激活后的INT8。
+- 输出：Requantization（重量化）并激活后的INT8。
 
 Bias的常见离线计算方式是：
 
@@ -17,23 +17,24 @@ bias_int32 = round(real_bias / (activation_scale × weight_scale))
 NPU1.1会检测`INT32 accumulator + INT32 bias`的数学结果是否超出INT32范围。发生
 溢出时仍按二补码保留低32位以兼容NPU1.0，同时置位`error_code[1]`供软件诊断。
 
-## 当前重量化
+## 当前Requantization（重量化）
 
 完整量化通常需要乘法比例系数和zero-point。当前版本为减小面积，使用对称、2的幂
 缩放，zero-point固定为0：
 
 ```text
-if quant_shift == 0:
-    shifted = biased_sum
-else:
-    shifted = (biased_sum + 2^(quant_shift-1)) >>> quant_shift
+shifted = biased_sum >>> quant_shift
 
 quantized = saturate_to_int8(shifted)
 result = max(0, quantized)
 ```
 
-`>>>`是算术右移。加半个量化步长实现就近舍入，恰好位于半值时向正方向舍入。
-例如右移1位时：`1→1`、`-1→0`、`-3→-1`。
+`>>>`是Arithmetic Right Shift（算术右移）。移出的低位直接丢弃，不添加舍入偏置。
+对于非负数相当于向零截断，对于负数则向负无穷取整。例如右移1位时：
+`1→0`、`3→1`、`-1→-1`、`-3→-2`。
+
+这种规则减少了33位舍入加法器，硬件更简单；代价是相较Round-to-nearest
+（就近舍入）具有更大的量化误差。软件Golden Model必须使用相同规则。
 
 ## 当前限制
 

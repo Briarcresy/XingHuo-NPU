@@ -2,7 +2,7 @@
 
 // 纯推理流程的控制单元。
 // 只负责控制时序，不处理矩阵数据：
-// IDLE -> CLEAR -> RUN(phase 0~3) -> WRITE_RESULT -> IDLE。
+// IDLE -> CLEAR -> RUN(phase 0~3) -> COLLECT -> WRITE_RESULT -> IDLE。
 module ControlUnit (
     input clk,
     input rst,
@@ -15,12 +15,13 @@ module ControlUnit (
     output array_step,
     output result_write_enable
 );
-    localparam [1:0] IDLE = 2'd0;
-    localparam [1:0] CLEAR = 2'd1;
-    localparam [1:0] RUN = 2'd2;
-    localparam [1:0] WRITE_RESULT = 2'd3;
+    localparam [2:0] IDLE = 3'd0;
+    localparam [2:0] CLEAR = 3'd1;
+    localparam [2:0] RUN = 3'd2;
+    localparam [2:0] COLLECT = 3'd3;
+    localparam [2:0] WRITE_RESULT = 3'd4;
 
-    reg [1:0] state;
+    reg [2:0] state;
 
     // 这些控制信号由当前状态直接译码，数据通路无需了解状态编码。
     assign array_clear         = (state == CLEAR);
@@ -53,8 +54,13 @@ module ControlUnit (
                 end
 
                 RUN: begin
-                    if (phase == 2'd3) state <= WRITE_RESULT;
+                    if (phase == 2'd3) state <= COLLECT;
                     else phase <= phase + 1'b1;
+                end
+
+                COLLECT: begin
+                    // 给Result Collector一个周期锁存最后一个流水结果。
+                    state <= WRITE_RESULT;
                 end
 
                 WRITE_RESULT: begin
