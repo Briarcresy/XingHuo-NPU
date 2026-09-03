@@ -1,6 +1,6 @@
 # 架构设计
 
-星火NPU当前是一个2×2 True Weight Stationary（真正的权重固定）Systolic Array（脉动阵列）。
+星火NPU当前是一个2×2 Weight Stationary（权重固定）Systolic Array（脉动阵列）。
 一次任务计算：
 
 ```text
@@ -48,7 +48,7 @@ Weight始终来自PE内部Active Bank。Activation、Bias和`quant_shift`应从�
 保持到`done`出现；`weight_matrix`只在`weight_load`时被采样。当前设计没有完整输入
 缓冲区，也不支持任务队列。
 
-## NPU1.1可观测性通路
+## NPU1.1 可观测性通路
 
 ```text
 start + busy ───────────────→ START_WHILE_BUSY Sticky Bit（粘滞位）
@@ -59,7 +59,7 @@ busy + done ────────────────→ cycle_count / ta
 `Bias`模块同时输出32位回绕结果和溢出标志，VPU将四路标志归约后交给顶层。错误
 监控不会修改数据结果或控制状态机，因此NPU1.1与NPU1.0的合法任务数值行为一致。
 
-## NPU1.2 True Weight Stationary数据流
+## NPU1.2  Weight Stationary数据流
 
 ```text
                   K=0                         K=1

@@ -21,23 +21,23 @@ module MatrixFeeder (
     assign activation_11 = activation_matrix[31:24];
 
     always @(*) begin
-        activation_top_col0 = 8'sd0;
-        activation_top_col1 = 8'sd0;
+        activation_top_col0   = 8'sd0;
+        activation_top_col1   = 8'sd0;
         activation_valid_col0 = 1'b0;
         activation_valid_col1 = 1'b0;
         case (phase)
             2'd0: begin
-                activation_top_col0 = activation_00;
+                activation_top_col0   = activation_00;
                 activation_valid_col0 = 1'b1;
             end
             2'd1: begin
-                activation_top_col0 = activation_10;
-                activation_top_col1 = activation_01;
+                activation_top_col0   = activation_10;
+                activation_top_col1   = activation_01;
                 activation_valid_col0 = 1'b1;
                 activation_valid_col1 = 1'b1;
             end
             2'd2: begin
-                activation_top_col1 = activation_11;
+                activation_top_col1   = activation_11;
                 activation_valid_col1 = 1'b1;
             end
             default: begin

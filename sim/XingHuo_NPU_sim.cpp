@@ -7,10 +7,39 @@
 #include <string>
 #include <vector>
 
+#if defined(_WIN32)
+#include <io.h>
+#else
+#include <unistd.h>
+#endif
+
 #include "VXingHuo_NPU.h"
 #include "verilated.h"
 
 namespace {
+
+constexpr const char* kGreen = "\033[1;32m";
+constexpr const char* kRed = "\033[1;31m";
+constexpr const char* kReset = "\033[0m";
+
+bool is_terminal(int file_descriptor)
+{
+#if defined(_WIN32)
+    return _isatty(file_descriptor) != 0;
+#else
+    return isatty(file_descriptor) != 0;
+#endif
+}
+
+const char* terminal_color(int file_descriptor, const char* color)
+{
+    return is_terminal(file_descriptor) ? color : "";
+}
+
+const char* terminal_reset(int file_descriptor)
+{
+    return is_terminal(file_descriptor) ? kReset : "";
+}
 
 constexpr int kMaximumWaitCycles = 32;
 constexpr int kMaximumReportedFailures = 10;
@@ -497,7 +526,9 @@ int main(int argc, char** argv)
         }
 
         if (failures == 0) {
-            std::cout << "ALL " << vector_set.vectors.size() << " TESTS PASSED\n"
+            std::cout << terminal_color(STDOUT_FILENO, kGreen)
+                      << "ALL " << vector_set.vectors.size() << " TESTS PASSED"
+                      << terminal_reset(STDOUT_FILENO) << '\n'
                       << "directed=" << vector_set.directed_count
                       << " random=" << vector_set.random_count
                       << " seed=0x" << std::hex << vector_set.seed << '\n';
@@ -508,11 +539,13 @@ int main(int argc, char** argv)
             std::cerr << "Only the first " << kMaximumReportedFailures
                       << " failures were shown.\n";
         }
-        std::cerr << std::dec << failures << " of " << vector_set.vectors.size()
-                  << " tests failed\n";
+        std::cerr << terminal_color(STDERR_FILENO, kRed) << std::dec << failures
+                  << " of " << vector_set.vectors.size() << " tests failed"
+                  << terminal_reset(STDERR_FILENO) << '\n';
         return 1;
     } catch (const std::exception& error) {
-        std::cerr << "ERROR: " << error.what() << '\n';
+        std::cerr << terminal_color(STDERR_FILENO, kRed) << "ERROR: "
+                  << error.what() << terminal_reset(STDERR_FILENO) << '\n';
         return 2;
     }
 }
