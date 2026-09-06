@@ -138,8 +138,29 @@ def infer(inputs: NpuInputs) -> Matrix2x2:
 
 
 def expected_error_code(inputs: NpuInputs) -> int:
-    """返回一次合法任务结束后应置位的NPU1.1数值错误标志。"""
+    """返回一次合法任务结束后应置位的数值错误标志。"""
     sums = matmul_2x2(inputs.activation, inputs.weight)
     biases = (inputs.bias_0, inputs.bias_1, inputs.bias_0, inputs.bias_1)
     overflow = any(bias_add_int32(value, bias)[1] for value, bias in zip(sums, biases))
     return ERROR_BIAS_OVERFLOW if overflow else 0
+
+
+@dataclass(frozen=True)
+class XorNetworkResult:
+    """两层XOR网络的中间矩阵、输出矩阵和第0行分类。"""
+
+    hidden: Matrix2x2
+    output: Matrix2x2
+    classification: int
+
+
+XOR_WEIGHT_1 = Matrix2x2(1, -1, -1, 1)
+XOR_WEIGHT_2 = Matrix2x2(-1, 1, -1, 1)
+
+
+def infer_xor_network(activation: Matrix2x2) -> XorNetworkResult:
+    """匹配Tile两次调用Core的固定参数两层XOR网络。"""
+    hidden = infer(NpuInputs(activation, XOR_WEIGHT_1, 0, 0, 0))
+    output = infer(NpuInputs(hidden, XOR_WEIGHT_2, 1, 0, 0))
+    classification = int(output.value_01 > output.value_00)
+    return XorNetworkResult(hidden, output, classification)

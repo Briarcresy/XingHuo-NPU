@@ -38,7 +38,7 @@ def directed_cases() -> list[NamedCase]:
         NamedCase("negative_shift", NpuInputs(Matrix2x2(1, 0, 0, 1), Matrix2x2(-1, -3, -1, -3), 0, 0, 1)),
         NamedCase("maximum_shift", NpuInputs(Matrix2x2(127, -128, -128, 127), Matrix2x2(-128, 127, 127, -128), 123456, -123456, 31)),
         NamedCase("bias_boundaries", NpuInputs(Matrix2x2(1, 1, 1, 1), Matrix2x2(1, 1, 1, 1), INT32_MAX, INT32_MIN, 0)),
-        # NPU1.2 Weight-resident（权重驻留）定向用例：前两例复用同一权重；
+        # Weight-resident（权重驻留）定向用例：前两例复用同一权重；
         # 后两例用相同Activation
         # 对比切换前后的两组权重。expected仍全部由golden model生成。
         NamedCase("resident_reuse_a", NpuInputs(Matrix2x2(2, -3, 4, 5), Matrix2x2(1, 2, -1, 3), 7, -9, 1)),

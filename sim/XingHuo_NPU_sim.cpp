@@ -458,7 +458,7 @@ private:
         for (const TestVector& vector : vector_set.vectors) {
             if (vector.name == name) return vector;
         }
-        throw std::runtime_error("缺少NPU1.2定向向量: " + name);
+        throw std::runtime_error("缺少驻留权重定向向量: " + name);
     }
 
     void clear_errors()

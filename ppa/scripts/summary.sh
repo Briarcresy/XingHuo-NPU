@@ -17,7 +17,7 @@ seq_summary=$(awk '/of which used for sequential elements/ {
 }' "$stat_report")
 
 read -r setup_wns fmax <<< "$(awk -F '|' '
-    $3 ~ /core_clock/ && $4 ~ /max/ {
+    $3 ~ /tile_clock/ && $4 ~ /max/ {
         gsub(/^[[:space:]]+|[[:space:]]+$/, "", $8);
         gsub(/^[[:space:]]+|[[:space:]]+$/, "", $9);
         print $8, $9; exit
@@ -25,23 +25,25 @@ read -r setup_wns fmax <<< "$(awk -F '|' '
 ' "$timing_report")"
 
 hold_wns=$(awk -F '|' '
-    $3 ~ /core_clock/ && $4 ~ /min/ {
+    $3 ~ /tile_clock/ && $4 ~ /min/ {
         gsub(/^[[:space:]]+|[[:space:]]+$/, "", $8);
         print $8; exit
     }
 ' "$timing_report")
 
 read -r setup_tns hold_tns <<< "$(awk -F '|' '
-    $2 ~ /core_clock/ && $3 ~ /max/ {
+    $2 ~ /tile_clock/ && $3 ~ /max/ {
         value=$4; gsub(/^[[:space:]]+|[[:space:]]+$/, "", value); setup=value
     }
-    $2 ~ /core_clock/ && $3 ~ /min/ {
+    $2 ~ /tile_clock/ && $3 ~ /min/ {
         value=$4; gsub(/^[[:space:]]+|[[:space:]]+$/, "", value); hold=value
     }
     END { print setup, hold }
 ' "$timing_report")"
 
 total_power=$(awk '/^Total Power/ { print $(NF-1), $NF; exit }' "$power_report")
+test -n "$cell_count" && test -n "$total_area" && test -n "$setup_wns" && test -n "$hold_wns" \
+    || { echo "ERROR: PPA报告缺少必要字段" >&2; exit 1; }
 
 echo
 echo "========== PPA关键结果 =========="

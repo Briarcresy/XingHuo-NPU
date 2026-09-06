@@ -2,119 +2,180 @@ SHELL := /bin/bash
 
 PYTHON ?= python3
 VERILATOR ?= verilator
-TOP := XingHuo_NPU
+IVERILOG ?= iverilog
+VVP ?= vvp
+MPSOC_DIGITAL ?= $(if $(wildcard $(CURDIR)/build/mpsoc-digital/Makefile),$(CURDIR)/build/mpsoc-digital,$(HOME)/mpsoc-digital)
+ICS55_PDK ?= $(HOME)/pdk/icsprout55-pdk
+IEDA_BIN ?= $(CURDIR)/yosys-sta/bin/iEDA
 
-RTL_FILELIST := filelists/rtl.f
-RTL_FILES := $(shell awk 'NF && substr($$1, 1, 1) != sprintf("%c", 35) { print $$1 }' "$(RTL_FILELIST)")
-SIM_CPP := $(abspath sim/XingHuo_NPU_sim.cpp)
-GOLDEN_MODEL := sim/golden_model.py
-VECTOR_GENERATOR := sim/generate_vectors.py
-PYTHON_TESTS := $(wildcard tests/test_*.py)
+CORE_TOP := XingHuo_NPU
+TILE_TOP := XingHuoNpuTile
+CORE_FILELIST := filelists/core.f
+TILE_FILELIST := filelists/tile.f
+CORE_RTL := $(shell awk 'NF && substr($$1,1,1) != sprintf("%c",35) {print $$1}' $(CORE_FILELIST))
+TILE_RTL := $(shell awk 'NF && substr($$1,1,1) != sprintf("%c",35) {print $$1}' $(TILE_FILELIST))
 
 BUILD_DIR := build
-SIM_BUILD_DIR := $(BUILD_DIR)/sim
-VERILATOR_DIR := $(BUILD_DIR)/verilator
-SIM_BINARY := $(VERILATOR_DIR)/V$(TOP)
-VECTOR_FILE := $(SIM_BUILD_DIR)/test_vectors.txt
+CORE_SIM_DIR := $(BUILD_DIR)/core-verilator
+CORE_SIM := $(CORE_SIM_DIR)/V$(CORE_TOP)
+VECTOR_FILE := $(BUILD_DIR)/sim/test_vectors.txt
+TILE_TEST_DIR := $(BUILD_DIR)/tile-test
+CORE_SVA_DIR := $(BUILD_DIR)/core-sva
+TILE_SVA_DIR := $(BUILD_DIR)/tile-sva
 LINT_LOG := $(BUILD_DIR)/lint/verilator.log
-BUILD_LOG := $(SIM_BUILD_DIR)/verilator_build.log
-SVA_BUILD_DIR := $(BUILD_DIR)/sva
-SVA_LOG := $(SVA_BUILD_DIR)/verilator.log
+CORE_BUILD_LOG := $(BUILD_DIR)/sim/core-build.log
+TILE_TEST_LOG := $(TILE_TEST_DIR)/verilator.log
+CORE_SVA_LOG := $(CORE_SVA_DIR)/verilator.log
+TILE_SVA_LOG := $(TILE_SVA_DIR)/verilator.log
 
 TEST_COUNT ?= 1000
 TEST_SEED ?= 0x20260831
 
-# 颜色只用于交互式终端。输出被重定向到文件或CI日志时自动退化为纯文本，
-# 避免把ANSI转义字符写入日志。
-define print_info
-	@if [ -t 1 ]; then printf '\033[1;36m%s\033[0m\n' "$(1)"; else printf '%s\n' "$(1)"; fi
-endef
-
-define print_success
-	@if [ -t 1 ]; then printf '\033[1;32m%s\033[0m\n' "$(1)"; else printf '%s\n' "$(1)"; fi
-endef
-
-define print_error
-	@if [ -t 2 ]; then printf '\033[1;31m%s\033[0m\n' "$(1)" >&2; else printf '%s\n' "$(1)" >&2; fi
-endef
+VERILATOR_FLAGS := --timing --Wall -Werror-PINMISSING \
+	-Wno-UNUSEDSIGNAL -Wno-UNUSEDPARAM -Wno-DECLFILENAME \
+	-Wno-BLKSEQ -Wno-PINCONNECTEMPTY
 
 .DEFAULT_GOAL := help
 .DELETE_ON_ERROR:
 
+define print_info
+	@if [ -t 1 ]; then printf '\033[1;36m%s\033[0m\n' "$(1)"; else printf '%s\n' "$(1)"; fi
+endef
+define print_success
+	@if [ -t 1 ]; then printf '\033[1;32m%s\033[0m\n' "$(1)"; else printf '%s\n' "$(1)"; fi
+endef
+
 help:
-	@echo "星火NPU常用命令："
-	@echo "  make lint       Verilator检查全部Verilog-2005 RTL"
-	@echo "  make vectors    用Python golden model生成批量测试向量"
-	@echo "  make sim        生成向量、构建并运行Verilator仿真"
-	@echo "  make sva-test   用Verilator运行NPU1.2周期级SVA"
-	@echo "  make test       运行Python、Verilator批量仿真和SVA"
-	@echo "  make ppa-check  检查本地ICS55 PPA依赖"
-	@echo "  make ppa        运行现有ICS55 PPA流程"
-	@echo "  make clean-sim  删除功能仿真生成物"
-	@echo "  make clean      删除全部build生成物"
-	@echo
-	@echo "随机测试参数：TEST_COUNT=$(TEST_COUNT) TEST_SEED=$(TEST_SEED)"
+	@printf '%s\n' '星火NPU MPSoC-Digital常用命令：'
+	@printf '%s\n' '  make lint             检查Core和Tile正式RTL'
+	@printf '%s\n' '  make test             运行Golden Model、Core、Tile和SVA验证'
+	@printf '%s\n' '  make doctor           检查官方框架工具版本'
+	@printf '%s\n' '  make official-check   使用官方框架运行lint/unit/harness检查'
+	@printf '%s\n' '  make official-export  官方检查、导出并执行独立export-check'
+	@printf '%s\n' '  make ppa              运行ICS55 Tile PPA估算'
+	@printf '%s\n' '  make gls              使用ICS55单元模型运行四态门级功能验证'
+	@printf '%s\n' '  make multi-corner     对同一网表运行7个库角STA估算'
+	@printf '%s\n' '  make release-check    完整检查并归档源码/官方导出/报告/哈希'
+	@printf '%s\n' '  make clean            删除本项目build生成物'
 
-# expected只由Python golden model计算，生成物统一写入build/。
-vectors: $(GOLDEN_MODEL) $(VECTOR_GENERATOR)
-	@mkdir -p "$(SIM_BUILD_DIR)"
-	@$(PYTHON) "$(VECTOR_GENERATOR)" \
-		--count "$(TEST_COUNT)" --seed "$(TEST_SEED)" --output "$(VECTOR_FILE)"
+vectors: sim/golden_model.py sim/generate_vectors.py
+	@mkdir -p "$(dir $(VECTOR_FILE))"
+	@$(PYTHON) sim/generate_vectors.py --count "$(TEST_COUNT)" \
+		--seed "$(TEST_SEED)" --output "$(VECTOR_FILE)"
 
-# 使用统一filelist构建C++17 Verilator模型；完整工具输出保存到日志。
-$(SIM_BINARY): $(RTL_FILELIST) $(RTL_FILES) $(SIM_CPP) Makefile
-	@mkdir -p "$(VERILATOR_DIR)" "$(SIM_BUILD_DIR)"
-	@echo "Building Verilator model..."
-	@if ! $(VERILATOR) --cc --exe --build \
-		-Wall --language 1364-2005 \
-		--top-module "$(TOP)" \
-		--Mdir "$(VERILATOR_DIR)" \
-		-CFLAGS "-std=c++17" \
-		-f "$(RTL_FILELIST)" "$(SIM_CPP)" > "$(BUILD_LOG)" 2>&1; then \
-		if [ -t 2 ]; then printf '\033[1;31m%s\033[0m\n' "ERROR: Verilator构建失败，日志末尾如下：" >&2; else printf '%s\n' "ERROR: Verilator构建失败，日志末尾如下：" >&2; fi; \
-		tail -n 80 "$(BUILD_LOG)"; \
-		exit 1; \
-	fi
-	$(call print_success,Verilator model ready: $(SIM_BINARY))
+xor-expected: sim/golden_model.py sim/generate_xor_expected.py
+	@$(PYTHON) sim/generate_xor_expected.py
 
-sim: vectors $(SIM_BINARY)
-	@"$(SIM_BINARY)" "$(VECTOR_FILE)"
-
-python-test: $(GOLDEN_MODEL) $(PYTHON_TESTS)
-	$(call print_info,Running Python golden model tests...)
-	@$(PYTHON) -m unittest discover -s tests -v
+python-test:
+	$(call print_info,Running Python Golden Model tests...)
+	@$(PYTHON) -m unittest discover -s tests -p 'test_*.py' -v
 	$(call print_success,PYTHON GOLDEN MODEL TESTS PASSED)
 
-sva-test: $(RTL_FILELIST) $(RTL_FILES) verification/XingHuo_NPU_assertions.sv verification/XingHuo_NPU_sva_tb.sv
-	@mkdir -p "$(SVA_BUILD_DIR)"
-	$(call print_info,Running NPU1.2 SVA test...)
-	@if ! $(VERILATOR) --binary --assert --timing -Wall -Wno-BLKSEQ \
-		-Wno-UNUSEDSIGNAL -Wno-SYNCASYNCNET \
-		--top-module XingHuo_NPU_sva_tb --Mdir "$(SVA_BUILD_DIR)/obj" \
-		-f "$(RTL_FILELIST)" verification/XingHuo_NPU_assertions.sv \
-		verification/XingHuo_NPU_sva_tb.sv > "$(SVA_LOG)" 2>&1; then \
-		if [ -t 2 ]; then printf '\033[1;31m%s\033[0m\n' "ERROR: SVA构建失败，日志末尾如下：" >&2; else printf '%s\n' "ERROR: SVA构建失败，日志末尾如下：" >&2; fi; tail -n 80 "$(SVA_LOG)"; exit 1; \
-	fi
-	@if ! "$(SVA_BUILD_DIR)/obj/VXingHuo_NPU_sva_tb" >> "$(SVA_LOG)" 2>&1; then \
-		if [ -t 2 ]; then printf '\033[1;31m%s\033[0m\n' "ERROR: SVA仿真失败，日志末尾如下：" >&2; else printf '%s\n' "ERROR: SVA仿真失败，日志末尾如下：" >&2; fi; tail -n 80 "$(SVA_LOG)"; exit 1; \
-	fi
-	@grep -q "NPU1.2 SVA TEST PASS" "$(SVA_LOG)"
-	$(call print_success,NPU1.2 SVA TEST PASSED)
+$(CORE_SIM): $(CORE_FILELIST) $(CORE_RTL) sim/XingHuo_NPU_sim.cpp
+	@mkdir -p "$(CORE_SIM_DIR)" "$(dir $(CORE_BUILD_LOG))"
+	$(call print_info,Building Verilator Core model...)
+	@if ! $(VERILATOR) --cc --exe --build --language 1364-2005 \
+		$(VERILATOR_FLAGS) --top-module "$(CORE_TOP)" --Mdir "$(CORE_SIM_DIR)" \
+		-CFLAGS '-std=c++17' -f "$(CORE_FILELIST)" sim/XingHuo_NPU_sim.cpp \
+		>"$(CORE_BUILD_LOG)" 2>&1; then \
+		printf '\033[1;31m%s\033[0m\n' 'ERROR: Core构建失败，日志末尾：' >&2; \
+		tail -n 80 "$(CORE_BUILD_LOG)"; exit 1; fi
 
-test: python-test sim sva-test
-	$(call print_success,ALL TESTS AND VERIFICATION PASSED)
+core-test: vectors $(CORE_SIM)
+	$(call print_info,Running randomized NPU Core tests...)
+	@"$(CORE_SIM)" "$(VECTOR_FILE)"
 
-# lint只读取filelists/rtl.f中的正式RTL，不包含仿真、reference或build。
-lint: $(RTL_FILELIST) $(RTL_FILES)
+tile-test: xor-expected $(TILE_FILELIST) $(TILE_RTL) tests/rtl/XorExpectedPkg.sv tests/rtl/XingHuoNpuTileTb.sv verification/XingHuoNpuTile_assertions.sv
+	@mkdir -p "$(TILE_TEST_DIR)"
+	$(call print_info,Running manual/external two-layer XOR Tile tests...)
+	@if ! $(VERILATOR) --binary --assert $(VERILATOR_FLAGS) \
+		--top-module XingHuoNpuTileTb --Mdir "$(TILE_TEST_DIR)/obj" \
+		-f "$(TILE_FILELIST)" tests/rtl/XorExpectedPkg.sv \
+		verification/XingHuoNpuTile_assertions.sv \
+		tests/rtl/XingHuoNpuTileTb.sv \
+		>"$(TILE_TEST_LOG)" 2>&1; then \
+		printf '\033[1;31m%s\033[0m\n' 'ERROR: Tile构建失败，日志末尾：' >&2; \
+		tail -n 80 "$(TILE_TEST_LOG)"; exit 1; fi
+	@if ! "$(TILE_TEST_DIR)/obj/VXingHuoNpuTileTb" >>"$(TILE_TEST_LOG)" 2>&1; then \
+		printf '\033[1;31m%s\033[0m\n' 'ERROR: Tile测试失败，日志末尾：' >&2; \
+		tail -n 80 "$(TILE_TEST_LOG)"; exit 1; fi
+	@grep -q 'XINGHUO NPU TILE UNIT TEST PASS' "$(TILE_TEST_LOG)"
+	$(call print_success,MANUAL/EXTERNAL XOR TILE TESTS PASSED)
+
+core-sva: $(CORE_FILELIST) $(CORE_RTL) verification/XingHuo_NPU_assertions.sv verification/XingHuo_NPU_sva_tb.sv
+	@mkdir -p "$(CORE_SVA_DIR)"
+	$(call print_info,Running NPU Core SVA...)
+	@if ! $(VERILATOR) --binary --assert $(VERILATOR_FLAGS) \
+		--top-module XingHuo_NPU_sva_tb --Mdir "$(CORE_SVA_DIR)/obj" \
+		-f "$(CORE_FILELIST)" verification/XingHuo_NPU_assertions.sv \
+		verification/XingHuo_NPU_sva_tb.sv >"$(CORE_SVA_LOG)" 2>&1 \
+		|| ! "$(CORE_SVA_DIR)/obj/VXingHuo_NPU_sva_tb" >>"$(CORE_SVA_LOG)" 2>&1; then \
+		tail -n 80 "$(CORE_SVA_LOG)"; exit 1; fi
+	@grep -q 'NPU CORE SVA TEST PASS' "$(CORE_SVA_LOG)"
+	$(call print_success,NPU CORE SVA PASSED)
+
+tile-sva: $(TILE_FILELIST) $(TILE_RTL) verification/XingHuoNpuTile_assertions.sv verification/XingHuoNpuTile_sva_tb.sv
+	@mkdir -p "$(TILE_SVA_DIR)"
+	$(call print_info,Running MPSoC-Digital Tile SVA...)
+	@if ! $(VERILATOR) --binary --assert $(VERILATOR_FLAGS) \
+		--top-module XingHuoNpuTile_sva_tb --Mdir "$(TILE_SVA_DIR)/obj" \
+		-f "$(TILE_FILELIST)" verification/XingHuoNpuTile_assertions.sv \
+		verification/XingHuoNpuTile_sva_tb.sv >"$(TILE_SVA_LOG)" 2>&1 \
+		|| ! "$(TILE_SVA_DIR)/obj/VXingHuoNpuTile_sva_tb" >>"$(TILE_SVA_LOG)" 2>&1; then \
+		tail -n 80 "$(TILE_SVA_LOG)"; exit 1; fi
+	@grep -q 'NPU TILE SVA TEST PASS' "$(TILE_SVA_LOG)"
+	$(call print_success,MPSoC-DIGITAL TILE SVA PASSED)
+
+sva-test: core-sva tile-sva
+
+lint: $(TILE_FILELIST) $(TILE_RTL)
 	@mkdir -p "$(dir $(LINT_LOG))"
-	$(call print_info,Linting Verilog-2005 RTL...)
-	@if ! $(VERILATOR) --lint-only -Wall --language 1364-2005 \
-		--top-module "$(TOP)" -f "$(RTL_FILELIST)" > "$(LINT_LOG)" 2>&1; then \
-		if [ -t 2 ]; then printf '\033[1;31m%s\033[0m\n' "ERROR: Verilator lint失败，日志末尾如下：" >&2; else printf '%s\n' "ERROR: Verilator lint失败，日志末尾如下：" >&2; fi; \
-		tail -n 80 "$(LINT_LOG)"; \
-		exit 1; \
-	fi
-	$(call print_success,RTL LINT PASSED (log: $(LINT_LOG)))
+	$(call print_info,Linting official Tile v1 RTL...)
+	@if ! $(VERILATOR) --lint-only $(VERILATOR_FLAGS) --top-module "$(TILE_TOP)" \
+		-f "$(TILE_FILELIST)" >"$(LINT_LOG)" 2>&1; then \
+		tail -n 80 "$(LINT_LOG)"; exit 1; fi
+	$(call print_success,TILE RTL LINT PASSED)
+
+four-state-test: xor-expected
+	@mkdir -p "$(BUILD_DIR)/four-state"
+	@$(IVERILOG) -g2012 -s XingHuoNpuTileFourStateTb \
+		-o "$(BUILD_DIR)/four-state/sim" -f "$(TILE_FILELIST)" \
+		tests/rtl/XingHuoNpuTileFourStateTb.sv >"$(BUILD_DIR)/four-state/build.log" 2>&1 \
+		|| { tail -n 50 "$(BUILD_DIR)/four-state/build.log"; exit 1; }
+	@$(VVP) "$(BUILD_DIR)/four-state/sim" >"$(BUILD_DIR)/four-state/test.log" 2>&1 \
+		|| { cat "$(BUILD_DIR)/four-state/test.log"; exit 1; }
+	@cat "$(BUILD_DIR)/four-state/test.log"
+
+test: python-test core-test tile-test sva-test four-state-test
+	$(call print_success,ALL LOCAL TESTS AND VERIFICATION PASSED)
+
+doctor:
+	@test -f "$(MPSOC_DIGITAL)/Makefile" || { \
+		printf 'ERROR: 找不到官方框架：%s\n' "$(MPSOC_DIGITAL)"; exit 1; }
+	@$(MAKE) -C "$(MPSOC_DIGITAL)" doctor
+
+official-check:
+	@test -f "$(MPSOC_DIGITAL)/Makefile" || { \
+		printf 'ERROR: 找不到官方框架：%s\n' "$(MPSOC_DIGITAL)"; exit 1; }
+	@mkdir -p "$(BUILD_DIR)/official"
+	$(call print_info,Running official MPSoC-Digital check...)
+	@if ! $(MAKE) -C "$(MPSOC_DIGITAL)" check DESIGN="$(CURDIR)" \
+		>"$(BUILD_DIR)/official/check.log" 2>&1; then \
+		printf '\033[1;31m%s\033[0m\n' 'ERROR: 官方check失败，日志末尾：' >&2; \
+		tail -n 80 "$(BUILD_DIR)/official/check.log"; exit 1; fi
+	$(call print_success,OFFICIAL MPSoC-DIGITAL CHECK PASSED)
+
+official-export: official-check
+	$(call print_info,Exporting and independently checking final Tile package...)
+	@input_dir=$$($(PYTHON) scripts/prepare_official.py --parent "$(BUILD_DIR)/official") || exit 1; \
+	if ! $(MAKE) -C "$(MPSOC_DIGITAL)" export DESIGN="$$input_dir" \
+		>"$(BUILD_DIR)/official/export.log" 2>&1 \
+		|| ! $(MAKE) -C "$(MPSOC_DIGITAL)" export-check DESIGN="$$input_dir" \
+		>"$(BUILD_DIR)/official/export-check.log" 2>&1; then \
+		printf '\033[1;31m%s\033[0m\n' 'ERROR: 官方export/export-check失败，日志末尾：' >&2; \
+		tail -n 80 "$(BUILD_DIR)/official/export.log" 2>/dev/null; \
+		tail -n 80 "$(BUILD_DIR)/official/export-check.log" 2>/dev/null; exit 1; fi
+	$(call print_success,OFFICIAL TILE EXPORT AND EXPORT-CHECK PASSED)
 
 ppa-check:
 	@$(MAKE) -C ppa check
@@ -122,10 +183,19 @@ ppa-check:
 ppa:
 	@$(MAKE) -C ppa ppa
 
-clean-sim:
-	@rm -rf "$(SIM_BUILD_DIR)" "$(VERILATOR_DIR)" "$(BUILD_DIR)/lint" "$(SVA_BUILD_DIR)"
+gls:
+	@$(MAKE) -C ppa gls
+
+multi-corner:
+	@$(MAKE) -C ppa multi-corner
+
+release-check:
+	@$(PYTHON) scripts/release_check.py --framework "$(MPSOC_DIGITAL)" \
+		--pdk "$(ICS55_PDK)" --ieda "$(IEDA_BIN)"
 
 clean:
 	@rm -rf "$(BUILD_DIR)"
 
-.PHONY: help vectors sim python-test sva-test test lint ppa-check ppa clean-sim clean
+.PHONY: help vectors xor-expected python-test core-test tile-test core-sva tile-sva sva-test doctor \
+	lint test official-check official-export ppa-check ppa clean
+.PHONY: four-state-test gls multi-corner release-check

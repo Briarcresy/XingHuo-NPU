@@ -1,236 +1,154 @@
 # “星火” NPU
 
-星火NPU是一个用于学习、验证和小面积流片迭代的2×2对称INT8推理加速器。当前数据
-通路为：
+面向 MPSoC-Digital 流片的教学型神经网络加速器。项目包含一个 2×2 INT8 Weight Stationary（权重固定）NPU Core，以及符合官方 Tile Contract（Tile 接口契约）的外围控制逻辑，可自动执行一个两层 XOR 分类网络。
+
+## 当前能力
+
+| 指标 | 当前设计 |
+| :-- | :-- |
+| 运算数据类型 | INT8 乘法、INT32 累加与 Bias（偏置） |
+| 核心阵列 | 2×2 Systolic Array（脉动阵列） |
+| Dataflow（数据流） | Weight Stationary（权重固定） |
+| 激活与量化 | ReLU；Arithmetic Right Shift（算术右移）后 INT8 Saturation（饱和） |
+| 网络工作流 | 两层 2×2 XOR 分类网络，由硬件自动调度 |
+| 输入方式 | Manual Mode（手动模式）与 External Host Mode（外部主机模式） |
+| 流片接口 | MPSoC-Digital 固定 Tile 接口、256×8 Shared RAM（共享存储器） |
+| 基准时钟 | 100 MHz（PPA 假设，最终以后端结果为准） |
+
+## 工程结构
 
 ```text
-INT8矩阵乘法 → INT32 Accumulation（累加）→ INT32 Bias →
-Requantization（重量化）→ INT8 Saturation（饱和）→ ReLU
+rtl/core/       与具体流片平台无关的 NPU Core（Verilog-2005）
+rtl/tile/       MPSoC-Digital Tile 外围与 XOR 网络控制器（SystemVerilog）
+tests/rtl/      Tile 单元测试与官方 Harness（验证外壳）测试
+verification/   Core/Tile 的 SVA（SystemVerilog Assertions）
+sim/            Python Golden Model、向量生成器和 Core Verilator 驱动
+filelists/      Core 与完整 Tile 的 RTL 文件清单
+docs/           架构、接口、量化与验证说明
+ppa/            Yosys + ICS55 + iEDA 的本地 PPA 估算流程
+design.json     MPSoC-Digital 官方工程描述
 ```
 
-正式RTL严格使用IEEE Verilog-2005；Python Golden Model（黄金参考模型）独立计算
-期望结果与Bias Overflow（溢出）状态；C++17 Testbench（测试平台）通过Verilator
-批量验证RTL，SVA保存在独立验证目录。
-
-## 当前开发版本：NPU1.3
-
-`NPU1.3`继承NPU1.2的True Weight Stationary（真正的权重固定）Systolic Array
-（脉动阵列）、Active/Shadow Weight Bank（活动/影子权重存储组）、Error Monitor
-（错误监控）和Performance Counter（性能计数器）。本版本将Requantization（重量化）
-从Round-to-nearest（就近舍入）简化为直接Arithmetic Right Shift（算术右移），删除
-四路重量化路径中的舍入偏置和33位舍入加法器，以更简单的数值规则换取更小的硬件开销。
-
-## 核心指标
-
-| 指标                | NPU1.0基线        | NPU1.1可观测性版  | NPU1.2实测基线          |
-| ------------------- | ----------------- | ----------------- | ----------------------- |
-| 计算规模            | 2×2 INT8矩阵乘法  | 与NPU1.0相同      | 与NPU1.0相同            |
-| PE数量              | 4个               | 4个               | 4个                     |
-| 数据流              | Output Stationary | Output Stationary | True Weight Stationary  |
-| 可观测性            | `busy`、`done`    | 错误与性能计数    | 增加权重bank状态        |
-| PPA目标频率         | 300 MHz           | 100 MHz           | 100 MHz                 |
-| 映射估算最高频率    | 高于300 MHz       | 约264.486 MHz     | 约262.803 MHz           |
-| 单次计算延迟        | 6周期，约20 ns    | 6周期，约60 ns    | 7周期，约70 ns          |
-| 连续任务启动间隔    | 7周期，约23.33 ns | 7周期，约70 ns    | 8周期，约80 ns          |
-| 100 MHz理论峰值算力 | —                 | 0.4 GMAC/s        | 0.4 GMAC/s              |
-| 当前调度有效算力    | —                 | 约0.057 GMAC/s    | 约0.050 GMAC/s          |
-| 标准单元数量        | 5376              | 5705              | 5634（比NPU1.1少1.24%） |
-| 标准单元面积        | 10999.24 µm²      | 11703.44 µm²      | 11506.32 µm²（少1.68%） |
-| 时序单元面积        | 1536.92 µm²       | 2054.36 µm²       | 2579.64 µm²，占22.42%   |
-| 建立/保持WNS        | +0.063/+0.140 ns  | +6.219/+0.113 ns  | +6.195/+0.111 ns        |
-| 建立/保持TNS        | 0/0 ns            | 0/0 ns            | 0/0 ns                  |
-| 粗略功耗估算        | 3.799 W           | 2.026 W           | 0.298 W                 |
-| 顶层信号位数        | 170位             | 228位             | 232位                   |
-| Verilator批量用例   | 1012例            | 1012例            | 1016例及独立SVA         |
-
-NPU1.2在100 MHz下Setup/Hold Check（建立/保持检查）均通过。每个PE只保存一个Active
-和一个Shadow Weight，权重寄存器共64位；Activation纵向传播，INT32 Partial Sum横向
-传播。相比此前Output Stationary + Weight-resident版本，面积减少约9.60%，但新增
-Result Collector使单任务多一个周期。功耗没有真实VCD/SAIF，只能作为粗略参考。
-
-NPU1.3不改变阵列数据流、接口和任务周期数。删除舍入逻辑后的PPA结果如下：
-
-| NPU1.3 PPA指标       | NPU1.2         | NPU1.3         | 变化                  |
-| -------------------- | -------------- | -------------- | --------------------- |
-| 标准单元数量         | 5634           | 4946           | 减少688，约12.21%     |
-| 标准单元面积         | 11506.32 µm²   | 10104.92 µm²   | 减少1401.40 µm²，约12.18% |
-| 组合逻辑面积         | 8926.68 µm²    | 7525.28 µm²    | 约减少15.70%          |
-| 时序单元面积         | 2579.64 µm²    | 2579.64 µm²    | 不变                  |
-| 时序单元面积占比     | 22.42%         | 25.53%         | 因组合逻辑减少而上升  |
-| 顶层信号位数         | 232位          | 229位          | 删除3个恒零保留位     |
-| Setup WNS            | +6.195 ns      | +6.674 ns      | 改善0.479 ns          |
-| Hold WNS             | +0.111 ns      | +0.111 ns      | 不变                  |
-| Setup/Hold TNS       | 0/0 ns         | 0/0 ns         | 均无违例              |
-| 映射估算最高频率     | 262.803 MHz    | 300.682 MHz    | 约提高14.41%          |
-| 粗略功耗             | 0.2984 W       | 0.1774 W       | 约降低40.55%          |
-
-这说明33位舍入偏置生成和四路舍入加法器具有明显的组合逻辑成本。时序单元面积完全
-不变，符合本版本只简化组合Requantization数据通路的预期。最高频率是当前门级映射和
-理想时钟条件下的估算值，并不等于完成布局布线后芯片能够工作的保证频率。
-
-PPA数据来自ICS55 RVT、TT、1.2 V、25 ℃、100 MHz约束下的Yosys门级映射和iEDA分析。面积是
-标准单元面积，不是最终Die面积；功耗使用统一的0.1默认翻转率且没有真实VCD/SAIF、
-布局布线和寄生参数，只适合比较不同RTL版本，不能作为最终芯片功耗。
-
-## 版本历史
-
-- `NPU1.0`：完成2×2 INT8推理数据通路和基础验证；
-- `NPU1.1`：增加Sticky Error（粘滞错误）、Bias Overflow、Performance Counter和SVA；
-- `NPU1.2`：采用True Weight Stationary数据流，增加Active/Shadow Weight Bank、
-  Partial Sum Pipeline、Result Collector、Atomic Switch和Weight Reuse。
-- `NPU1.3`：Requantization改为直接Arithmetic Right Shift，删除舍入偏置与舍入加法器；
-  `error_code`从8位缩减为全部有效的5位，并同步Golden Model、验证和文档。
-
-## 目录结构
+最终提交给 MPSoC-Digital 的顶层 `Tile` 由官方导出工具生成。仓库中的用户顶层是 `XingHuoNpuTile`，其端口名称、方向和位宽严格遵循官方契约。Shared RAM 由 SoC 提供，设计只连接其单端口接口，不在 Tile 内重复实例化。
 
 ```text
-src/          正式Verilog-2005 RTL
-sim/          Python golden model、向量生成器和Verilator C++ testbench
-tests/        Python golden model单元测试
-filelists/    统一RTL文件列表
-constraints/  基础时钟约束
-docs/         架构、接口、量化和验证文档
-verification/ 独立SystemVerilog Assertions，不进入正式综合
-ppa/          Yosys、ICS55与iEDA PPA评估流程
-tapeout/      各流片平台的独立适配版本，不影响通用Core主线
-reference/    学习参考代码，不参与正式构建
-build/        自动生成的向量、模型、日志和报告，不提交Git
+按钮/拨码 -> ManualInputController ----+
+                                       +-> RAM仲裁 -> Shared RAM
+customIn -> ExternalHostInterface -----+                 |
+                                                         v
+显示 <- DisplayController <- XorNetworkController -> 2×2 NPU Core
 ```
 
-## 快速开始
+## 两层 XOR 网络
 
-需要：
+硬件依次执行 `h = ReLU(A×W1+B1)` 和 `y = ReLU(h×W2+B2)`。固定 Demo 使用
+`W1=[[1,-1],[-1,1]]`、`B1=[0,0]`、`W2=[[-1,1],[-1,1]]`、`B2=[1,0]`，
+并比较两个输出得分类别。第二层输入来自第一层真实 RTL 输出，而非 Golden Model。
 
-- Python 3.10或更新版本；
-- Verilator；
-- 支持C++17的C++编译器和GNU Make。
+## 两种使用方式
 
-查看所有入口：
+### Manual Mode（手动模式）
 
-```bash
-make help
-```
+复位后默认为手动模式。DIP Switch（拨码开关）表示一个 8-bit 数据或地址：
 
-检查全部正式RTL：
+| 按钮 | 功能 |
+| :-- | :-- |
+| BTN0 | 将 DIP 写入当前 RAM 地址，然后地址加一 |
+| BTN1 | RAM 地址归零 |
+| BTN2 | 将 DIP 装入 RAM 地址指针 |
+| BTN3 | 使用 RAM 中参数运行可编程两层网络 |
+| BTN4 / BTN5 | 下一个 / 上一个显示页面 |
+| BTN6 | 清除完成与错误状态 |
+| BTN7 | 用 DIP[1:0] 运行固定参数 XOR Demo（演示） |
 
-```bash
-make lint
-```
+BTN7 是最简单的上板路径：用 DIP[1:0] 输入 `00/01/10/11`，按一次 BTN7，LED 即可显示分类结果。按钮经过同步、Debounce（去抖）和单脉冲处理。
 
-生成向量、构建模型并运行默认批量仿真：
+### External Host Mode（外部主机模式）
 
-```bash
-make sim
-```
-
-运行NPU1.2周期级断言：
-
-```bash
-make sva-test
-```
-
-默认生成16个定向用例和1000个固定种子随机用例。成功结果为：
+将 `io_customIn[15]` 置 1 请求外部模式。主机通过 Toggle Handshake（翻转握手）访问 RAM、启动任务和读取结果：
 
 ```text
-ALL 1016 TESTS PASSED
-directed=16 random=1000 seed=0x20260831
+io_customIn[7:0]   payload
+io_customIn[8]     request toggle
+io_customIn[11:9]  opcode
+io_customIn[15]    external-mode request
 ```
 
-修改随机数量和种子：
+主机先稳定 payload/opcode/mode，再翻转 request，并保持这些信号，直到 `io_customOut[8]` 的 acknowledge toggle 与 request 相等。
 
-```bash
-make sim TEST_COUNT=10000 TEST_SEED=12345
-```
+| Opcode | 操作 |
+| :-- | :-- |
+| 0 | 设置 RAM 地址 |
+| 1 | 写一个字节并自动递增地址 |
+| 2 | 读一个字节并自动递增地址 |
+| 3 | 启动 RAM 参数网络 |
+| 4 | 用 payload[1:0] 启动固定 XOR Demo |
+| 5 | 清除状态 |
 
-单独测试Python golden model：
+`io_customOut[7:0]` 是读数据；`[9]` busy；`[10]` done；`[12]` error；`[13]` classification；`[14]` 当前模式；`[15]` 表示协议版本 1。完整 RAM Map（地址表）和显示页面见 [接口说明](docs/interfaces.md)。
 
-```bash
-python3 -m unittest discover -s tests -v
-```
+## Shared RAM Map（共享存储器地址表）
 
-运行全部开源验证：
+| 地址 | 内容 |
+| :-- | :-- |
+| `00..03` | 输入 Activation（激活矩阵） |
+| `10..1C` | 第一层 Weight、Bias、Shift |
+| `20..23` | 第一层隐藏输出 |
+| `30..3C` | 第二层 Weight、Bias、Shift |
+| `40..43` | 第二层完整输出 |
+| `44..46` | 分类、状态、错误码 |
+
+所有多字节数据采用 Little Endian（小端）；逐字节定义见 [接口说明](docs/interfaces.md)。
+
+## 验证
 
 ```bash
 make test
 ```
 
-清理功能仿真生成物或全部生成物：
+它执行 Python Golden Model 单元测试、1016 组 Core 定向/随机向量、160组可编程两层网络、手动/外部协议边界、Core/Tile SVA和四态RTL测试。expected由Python Golden Model自动生成。
 
 ```bash
-make clean-sim
-make clean
+make doctor MPSOC_DIGITAL=~/mpsoc-digital
+make official-check MPSOC_DIGITAL=~/mpsoc-digital
+make official-export MPSOC_DIGITAL=~/mpsoc-digital
 ```
 
-## 数值格式
+第二条命令同时运行 `export-check`。具体分层见 [验证说明](docs/verification.md)。
 
-- Activation和Weight是有符号INT8；
-- 单次乘法产生完整INT16结果；
-- PE使用INT32 Accumulator（累加器）；
-- Bias是与累加值同尺度的INT32，并按输出列广播；
-- `quant_shift`通过直接Arithmetic Right Shift（算术右移）实现2的幂缩放，
-  随后执行INT8 Saturation；
-- ReLU将负数输出变为0；
-- Activation、Weight和输出zero-point固定为0。
-
-矩阵总线从低位到高位存放00、01、10、11：
-
-```text
-activation_matrix = {A11, A10, A01, A00}
-weight_matrix     = {W11, W10, W01, W00}
-result_matrix     = {Y11, Y10, Y01, Y00}
-bias_vector       = {bias1, bias0}
-```
-
-详细规则见[量化说明](docs/quantization.md)和[接口说明](docs/interfaces.md)。
-
-## 模块结构
-
-```text
-XingHuo_NPU
-├── ControlUnit
-├── MatrixFeeder
-├── SystolicArray
-│   └── MacPE × 4（每个PE含active/shadow权重bank）
-├── ResultCollector
-└── VPU
-    ├── Bias × 4
-    ├── Requantize × 4
-    └── ReLU × 4
-```
-
-详细数据流和状态时序见[架构说明](docs/architecture.md)。
-
-## 验证方法
-
-`sim/generate_vectors.py`生成定向和随机输入，并调用`sim/golden_model.py`得到expected。
-生成文件位于`build/sim/test_vectors.txt`。C++ testbench只读取向量、驱动DUT并比较
-actual，不包含任何手工expected。详见[验证说明](docs/verification.md)。
-
-## PPA评估
-
-本地ICS55流程需要额外安装Yosys、ICsprout55 PDK和包含iSTA/iPA的iEDA。检查依赖：
+## PPA 估算
 
 ```bash
-make ppa-check \
-  ICS55_PDK=/path/to/icsprout55-pdk \
-  IEDA_BIN=/path/to/iEDA
+make ppa ICS55_PDK=~/pdk/icsprout55-pdk IEDA_BIN=/path/to/iEDA
+make gls
+make multi-corner
+make release-check
 ```
 
-运行评估：
+该流程综合完整 `XingHuoNpuTile`。PPA 是前端估算，不等于布局布线后的签核结果，详见 [PPA 说明](ppa/README.md)。
 
-```bash
-make ppa \
-  ICS55_PDK=/path/to/icsprout55-pdk \
-  IEDA_BIN=/path/to/iEDA
-```
+新版ICS55、100 MHz、完整探索性IO预算下的TT估算：6380个标准单元，面积
+13325.20 μm²，Setup WNS 5.111 ns、Hold WNS 0.012 ns。功耗0.1864 W使用默认
+活动率。其他库角存在hold风险，应查看`build/ppa/XingHuoNpuTile-main-100MHz-RVT/corners/summary.md`。
+最终状态、缺少的平台输入和交付包说明见[流片准备记录](docs/tapeout-readiness.md)。
 
-当前PPA默认目标为100 MHz（10 ns），可以通过`CLK_FREQ_MHZ`覆盖。详细说明见
-[`ppa/README.md`](ppa/README.md)。PPA依赖和工艺库不进入公共CI。
+## 实物连接边界与已知限制
 
-## 当前限制
+- RTL 只定义数字 Tile 接口，不保证 `io_customIn/io_customOut`直接连接到封装引脚；
+  引脚、电压、连接器和外部设备接法由最终 MPSoC-Digital 平台决定。
+- 不假设平台包含 CPU，也不依赖 Shared RAM 的复位初值。
+- 当前网络规模固定为两层 2×2，参数可编程，但尚无通用指令集或大容量片上存储。
+- 按键去抖默认按 100 MHz 配置；若官方最终时钟不同，应调整
+  `BUTTON_DEBOUNCE_CYCLES`。
+- 当前尚未完成布局布线后 STA、功耗签核、DFT 或硅后验证。
 
-- 固定2×2矩阵规模，没有可编程指令或片上Unified Buffer；
-- 任务期间只需保持Activation、Bias和量化配置；Weight由PE内Active Bank提供；
-- 只支持共享的2次幂Requantization右移和固定ReLU；
-- 没有非零zero-point、逐通道量化、DMA、总线包装或SoC软件栈；
-- 基础SDC只约束时钟，封装确定前没有虚构IO delay、驱动和负载。
+## 文档与官方依据
+
+- [架构说明](docs/architecture.md)
+- [接口、RAM Map 与操作步骤](docs/interfaces.md)
+- [INT8 量化规则](docs/quantization.md)
+- [验证策略](docs/verification.md)
+- [MPSoC-Digital](https://github.com/openecos-projects/mpsoc-digital)
+- [Tile Contract](https://github.com/openecos-projects/mpsoc-digital/blob/main/docs/cn/tile-contract.md)
+- [User Guide](https://github.com/openecos-projects/mpsoc-digital/blob/main/docs/cn/user-guide.md)
+- [Architecture](https://github.com/openecos-projects/mpsoc-digital/blob/main/docs/cn/architecture.md)

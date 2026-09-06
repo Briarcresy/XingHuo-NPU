@@ -1,55 +1,31 @@
-# 验证方法
+# 验证策略
 
-## 为什么需要Golden Model（黄金参考模型）
+验证包含以下层次：
 
-RTL和Software Reference Model（软件参考模型）使用两套独立实现。Python根据公开
-数学规格计算expected，C++只负责
-把输入送入Verilator模型并比较结果。这样能够避免把RTL自身的错误复制成测试答案。
+1. `tests/test_golden_model.py`检查数值边界、溢出、量化和四组 XOR 真值表；
+2. Python Golden Model 生成 1016 组 Core 定向/随机向量，C++ Verilator 驱动比较；
+3. `XingHuoNpuTileTb.sv`通过外部协议验证160组两层网络（32组定向、128组随机），比较隐藏层、输出、分类、状态和错误码；覆盖0～31移位、高位忽略、溢出和连续任务；
+4. Core 与 Tile SVA 检查握手、状态、RAM 写地址和复位输出等周期不变量；
+5. 官方 Unit Test 与 Harness Test 检查 Tile Contract 和 Shared RAM 连接。
+6. Icarus 四态 RTL 仿真使用未初始化 RAM 运行同样160组网络，并检查复位期间写禁止和复位恢复；
+7. ICS55真实标准单元 Verilog 模型运行同一个四态测试，验证综合映射后的零延迟门级行为。
 
-```text
-Python输入生成器 ──→ Python golden model ──→ expected
-        │
-        └────────────→ Verilator C++驱动 ──→ actual
-                                             │
-                                  expected ←─┘ 比较
-```
+Tile边界测试还包括地址FF回绕、忙时请求延迟执行、85个运算/完成相对时刻复位、手动写/启动与模式请求的24组相对时序。Tile SVA在完整单元测试中启用，防止已接受事务在模式交接时丢失。两态Verilator的`$isunknown`不能替代四态仿真。
 
-## 测试分层
-
-1. `tests/test_golden_model.py`检查打包、矩阵次序、Bias广播、Arithmetic Right Shift（算术右移）、
-   Saturation（饱和）、Wraparound（回绕）和Overflow（溢出）规则；
-2. `generate_vectors.py`生成16个定向用例和默认1000个随机用例；
-3. `XingHuo_NPU_sim.cpp`连续执行所有用例，同时比较结果、错误码、7周期延迟和累计任务数；
-4. `verification/XingHuo_NPU_assertions.sv`用SVA检查周期级协议不变量；
-5. `verification/XingHuo_NPU_sva_tb.sv`定向触发错误状态、权重装载、切换和驻留计算。
-
-全部批量用例都会先执行`Load Shadow → Switch Active → Start`，因此1016例都覆盖纯
-Weight-resident Mode。NPU1.2新增的四个Directed Vector（定向向量）还验证同一Active Weight跨任务复用、
-计算期间装载Shadow不会污染当前结果，以及切换后的结果只使用新Active Weight。
-C++ Testbench还显式检查未装载启动、busy期间切换和空Shadow切换的Error Code；
-SVA检查Bank Valid（存储组有效）状态的周期关系。
-
-正式RTL继续使用IEEE Verilog-2005。SVA单独放在`verification/`，只用SystemVerilog
-验证工具编译，不进入`filelists/rtl.f`或综合流程。
-
-随机生成器使用固定seed。复现某次测试：
+`sim/generate_xor_expected.py`从 Python Golden Model 生成 `tests/rtl/XorExpectedPkg.sv`，RTL Testbench 不手工维护 expected 数据。
 
 ```bash
-make sim TEST_COUNT=1000 TEST_SEED=0x20260831
-```
-
-失败时testbench最多详细打印前10例，包括解包后的矩阵、Bias、shift、expected和actual。
-工具退出状态为非零，适用于脚本和CI。
-
-## 常用命令
-
-```bash
-python3 -m unittest discover -s tests -v
-make lint
-make vectors
-make sim
-make sva-test
 make test
+make lint
+make official-check MPSOC_DIGITAL=~/mpsoc-digital
+make official-export MPSOC_DIGITAL=~/mpsoc-digital
+make gls ICS55_PDK=~/pdk/icsprout55-pdk
+make multi-corner ICS55_PDK=~/pdk/icsprout55-pdk
+make release-check
 ```
 
-生成的向量、Verilator模型和日志统一位于`build/`，不提交Git。
+官方 `check`覆盖接口检查、Lint、Unit 与 Harness；`official-export`还生成最终 `Tile`并执行 `export-check`。本地通过不等价于官方通过，两者都应作为提交门槛。
+
+`make release-check`重新运行本地验证、官方导出、门级仿真和PPA/多角估算，将源码哈希、工具版本、导出包和报告保存在`build/releases/`。任一步工具/功能检查失败，生成失败记录并停止；时序负裕量如实标为NOT_MET，不会宣称签核通过。
+
+当前门级仿真没有SDF，SVA是仿真断言而非形式证明；尚未完成形式等价、CDC/RDC签核、DFT或布局布线后签核。PPA功耗仍为默认活动率估算。缺少的主办方输入与交接事项见[tapeout-readiness.md](tapeout-readiness.md)。

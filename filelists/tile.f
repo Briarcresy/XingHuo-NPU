@@ -1,0 +1,17 @@
+# MPSoC-Digital Tile正式综合源码；不包含testbench、assertion和reference。
+rtl/core/Bias.v
+rtl/core/ControlUnit.v
+rtl/core/MacPE.v
+rtl/core/MatrixFeeder.v
+rtl/core/ReLU.v
+rtl/core/Requantize.v
+rtl/core/ResultCollector.v
+rtl/core/SystolicArray.v
+rtl/core/VPU.v
+rtl/core/XingHuo_NPU.v
+rtl/tile/ButtonConditioner.sv
+rtl/tile/ManualInputController.sv
+rtl/tile/ExternalHostInterface.sv
+rtl/tile/XorNetworkController.sv
+rtl/tile/DisplayController.sv
+rtl/tile/XingHuoNpuTile.sv

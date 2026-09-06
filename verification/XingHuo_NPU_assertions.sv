@@ -1,6 +1,6 @@
 `timescale 1ns / 1ps
 
-// NPU1.1/1.2周期级接口断言。该文件只参与验证，不进入正式RTL filelist和综合流程。
+// 当前NPU Core周期级接口断言。该文件只参与验证，不进入正式综合流程。
 module XingHuo_NPU_assertions (
     input logic        clk,
     input logic        rst,
@@ -76,7 +76,7 @@ module XingHuo_NPU_assertions (
         else $error("legal weight switch did not update bank validity");
 endmodule
 
-bind XingHuo_NPU XingHuo_NPU_assertions npu12_assertions (
+bind XingHuo_NPU XingHuo_NPU_assertions core_assertions (
     .clk(clk),
     .rst(rst),
     .start(start),

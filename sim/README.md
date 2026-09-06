@@ -22,7 +22,7 @@ name activation_hex weight_hex bias_hex shift expected_hex error_hex
 - `error_hex`是Golden Model生成的预期Sticky Error Code（粘滞错误码）；
 - 所有负数均使用二补码位型。
 
-NPU1.2驻留权重测试从这些golden向量中选取专用定向用例，测试驱动只改变权重装载和
+驻留权重测试从这些golden向量中选取专用定向用例，测试驱动只改变权重装载和
 切换时序，不在C++中手算expected。
 
 Core已移除Direct Mode。批量Testbench对每一个向量都执行：

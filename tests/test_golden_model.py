@@ -8,6 +8,7 @@ from sim.golden_model import (
     ERROR_BIAS_OVERFLOW,
     bias_add_int32,
     expected_error_code,
+    infer_xor_network,
     infer,
     matmul_2x2,
     requantize_int32,
@@ -65,6 +66,17 @@ class GoldenModelTest(unittest.TestCase):
             Matrix2x2(1, 1, 1, 1), Matrix2x2(1, 1, 1, 1), INT32_MAX, 0, 0
         )
         self.assertEqual(expected_error_code(overflowing), ERROR_BIAS_OVERFLOW)
+
+    def test_two_layer_xor_truth_table(self):
+        for x1, x2, expected in ((0, 0, 0), (0, 1, 1), (1, 0, 1), (1, 1, 0)):
+            with self.subTest(x1=x1, x2=x2):
+                activation = Matrix2x2(x1, x2, 0, 0)
+                result = infer_xor_network(activation)
+                self.assertEqual(result.classification, expected)
+                self.assertGreater(
+                    result.output.value_01 if expected else result.output.value_00,
+                    result.output.value_00 if expected else result.output.value_01,
+                )
 
     def test_invalid_ranges_are_rejected(self):
         with self.assertRaises(ValueError):

@@ -1,6 +1,6 @@
 `timescale 1ns / 1ps
 
-// 用定向激励触发NPU1.1/1.2断言，包括错误状态、权重装载、切换和驻留计算。
+// 用定向激励触发当前Core断言，包括错误状态、权重装载、切换和驻留计算。
 module XingHuo_NPU_sva_tb;
     logic clk;
     logic rst;
@@ -92,7 +92,7 @@ module XingHuo_NPU_sva_tb;
         repeat (2) @(posedge clk);
 
         if (result_matrix !== 32'h302c1414 || !error_code[0])
-            $fatal(1, "NPU1.1 directed SVA stimulus produced wrong state");
+            $fatal(1, "Core directed SVA stimulus produced wrong state");
 
         @(negedge clk);
         clear_error = 1'b1;
@@ -113,7 +113,7 @@ module XingHuo_NPU_sva_tb;
         if (result_matrix !== 32'h302c1414)
             $fatal(1, "resident weight result is incorrect");
 
-        $display("NPU1.2 SVA TEST PASS");
+        $display("NPU CORE SVA TEST PASS");
         $finish;
     end
 endmodule
