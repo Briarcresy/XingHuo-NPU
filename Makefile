@@ -4,7 +4,7 @@ PYTHON ?= python3
 VERILATOR ?= verilator
 IVERILOG ?= iverilog
 VVP ?= vvp
-MPSOC_DIGITAL ?= $(if $(wildcard $(CURDIR)/build/mpsoc-digital/Makefile),$(CURDIR)/build/mpsoc-digital,$(HOME)/mpsoc-digital)
+MPSOC_DIGITAL ?= $(if $(wildcard $(CURDIR)/mpsoc-digital/Makefile),$(CURDIR)/mpsoc-digital,$(HOME)/mpsoc-digital)
 ICS55_PDK ?= $(HOME)/pdk/icsprout55-pdk
 IEDA_BIN ?= $(CURDIR)/yosys-sta/bin/iEDA
 

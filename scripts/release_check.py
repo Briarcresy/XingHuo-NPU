@@ -34,7 +34,13 @@ def capture(command, cwd=ROOT):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--framework", type=Path, default=Path.home() / "mpsoc-digital")
+    local_framework = ROOT / "mpsoc-digital"
+    parser.add_argument(
+        "--framework",
+        type=Path,
+        default=(local_framework if (local_framework / "Makefile").is_file()
+                 else Path.home() / "mpsoc-digital"),
+    )
     parser.add_argument("--pdk", type=Path, default=Path.home() / "pdk/icsprout55-pdk")
     parser.add_argument("--ieda", type=Path, default=ROOT / "yosys-sta/bin/iEDA")
     args = parser.parse_args()

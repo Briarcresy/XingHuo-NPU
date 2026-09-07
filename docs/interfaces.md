@@ -4,7 +4,7 @@
 
 用户模块为 `XingHuoNpuTile`。端口严格采用官方固定名称和位宽：`clock`、`reset`、8-bit LED/BTN/DIP、两位 4-bit 七段显示值、16-bit customIn/customOut，以及 256×8 Shared RAM 的地址、写使能、写数据和异步读数据。最终 `Tile` 包装器由官方 `make export` 生成。
 
-`reset`为高有效同步复位。`io_ledUpdate`和`io_hex7segUpdate`持续为 1。
+`reset`为高有效复位。当前 RTL 与官方用户模板示例一样，在 `clock` 上升沿同步处理复位；Tile v1 接口契约本身没有规定同步或异步复位实现。`io_ledUpdate`和`io_hex7segUpdate`持续为 1。
 
 ## Shared RAM Map（共享存储器地址表）
 
@@ -23,7 +23,7 @@
 | `0x40..0x43` | 4 B | 最终结果，4×INT8 |
 | `0x44` | 1 B | 分类结果，bit 0 有效 |
 | `0x45` | 1 B | 状态：bit0 valid、bit2 error、bit3 demo |
-| `0x46` | 1 B | Core 错误码，低 5 bit 有效 |
+| `0x46` | 1 B | Core错误码：bit0忙时启动、bit1 Bias溢出、bit2忙时装载权重、bit3未装载权重即启动；bit4保留为0 |
 
 RAM 为异步读；写入在 `clock` 上升沿且 `io_ramWen=1` 时发生。
 
@@ -46,7 +46,7 @@ START 的 ACK 表示启动命令已接受，网络状态最迟下一拍更新。
 
 BTN、DIP 和 customIn 均经过两级同步寄存器，带 `ASYNC_REG` 标记。多位总线一致性仍依赖上述稳定窗口和最终布线偏差预算；两级同步不等同于 CDC 签核。DIP 应在按键前至少稳定 3T，并保持到去抖后的操作完成。机械拨码变化后应待其稳定再按按钮。
 
-reset 是平台提供的同步信号，必须由上层满足时序。Tile 在 reset 有效时立即屏蔽 RAM 写使能，Shared RAM 不要求复位；复位后须重新写入完整可编程参数，或运行不依赖 RAM 初值的固定 Demo。
+当前设计在 `clock` 上升沿采样 reset，平台应保证其满足同步输入的建立/保持时间，并至少覆盖三个有效时钟沿。Tile 在采到 reset 有效的时钟沿时屏蔽 RAM 写使能，Shared RAM 不要求复位；复位后须重新写入完整可编程参数，或运行不依赖 RAM 初值的固定 Demo。若平台另行规定异步复位或异步置位/同步释放，应在 Tile 边界增加对应复位处理。
 
 典型任务：设置地址，逐字节写入参数，启动，等待 done，再从 `0x40`读取输出、分类和状态。
 

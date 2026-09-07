@@ -7,15 +7,13 @@ module XingHuo_NPU_assertions (
     input logic        start,
     input logic        clear_error,
     input logic        weight_load,
-    input logic        weight_switch,
     input logic        busy,
     input logic        done,
     input logic        error,
     input logic [4:0]  error_code,
     input logic [15:0] cycle_count,
     input logic [31:0] task_count,
-    input logic        active_weight_valid,
-    input logic        shadow_weight_valid
+    input logic        weight_valid
 );
     // error必须始终等于所有具体错误位的归约或。
     assert property (@(posedge clk) error == (|error_code))
@@ -27,7 +25,7 @@ module XingHuo_NPU_assertions (
 
     // 空闲时接受start，下一个周期必须进入busy。
     assert property (@(posedge clk) disable iff (rst)
-        (start && !busy && active_weight_valid) |=> busy)
+        (start && !busy && weight_valid) |=> busy)
         else $error("accepted start did not enter busy");
 
     // busy期间的start不会重启任务，而是在下一周期留下Sticky Error（粘滞错误）。
@@ -50,30 +48,21 @@ module XingHuo_NPU_assertions (
         (clear_error && busy) |=> busy || done)
         else $error("clear_error interrupted the active task");
 
-    // Active Weight未准备好时，Weight-resident Mode（权重驻留模式）启动必须被拒绝。
+    // 当前权重未准备好时，Weight-resident Mode（权重驻留模式）启动必须被拒绝。
     assert property (@(posedge clk) disable iff (rst)
-        (start && !busy && !active_weight_valid)
+        (start && !busy && !weight_valid)
         |=> (!busy && error_code[3]))
-        else $error("resident start without active weight was not rejected");
+        else $error("resident start without weight was not rejected");
 
-    // busy期间不允许切换active权重。
+    // 单Bank在busy期间不允许更新权重。
     assert property (@(posedge clk) disable iff (rst)
-        (weight_switch && busy) |=> error_code[2])
-        else $error("weight switch while busy was not reported");
+        (weight_load && busy) |=> error_code[2])
+        else $error("weight load while busy was not reported");
 
-    // 空闲但shadow无效时，切换请求也必须留下错误。
+    // 空闲时装载一拍后当前权重必须有效。
     assert property (@(posedge clk) disable iff (rst)
-        (weight_switch && !busy && !shadow_weight_valid) |=> error_code[4])
-        else $error("weight switch without shadow was not reported");
-
-    // 单独load一拍后shadow必须有效；合法switch后active有效且shadow被消费。
-    assert property (@(posedge clk) disable iff (rst)
-        (weight_load && !weight_switch) |=> shadow_weight_valid)
-        else $error("weight load did not validate shadow bank");
-    assert property (@(posedge clk) disable iff (rst)
-        (weight_switch && !busy && shadow_weight_valid && !weight_load)
-        |=> (active_weight_valid && !shadow_weight_valid))
-        else $error("legal weight switch did not update bank validity");
+        (weight_load && !busy) |=> weight_valid)
+        else $error("weight load did not validate the single bank");
 endmodule
 
 bind XingHuo_NPU XingHuo_NPU_assertions core_assertions (
@@ -82,13 +71,11 @@ bind XingHuo_NPU XingHuo_NPU_assertions core_assertions (
     .start(start),
     .clear_error(clear_error),
     .weight_load(weight_load),
-    .weight_switch(weight_switch),
     .busy(busy),
     .done(done),
     .error(error),
     .error_code(error_code),
     .cycle_count(cycle_count),
     .task_count(task_count),
-    .active_weight_valid(active_weight_valid),
-    .shadow_weight_valid(shadow_weight_valid)
+    .weight_valid(weight_valid)
 );

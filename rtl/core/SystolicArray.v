@@ -10,7 +10,6 @@ module SystolicArray (
     input clear,
     input step,
     input weight_load,
-    input weight_switch,
     input [31:0] weight_matrix,
     input signed [7:0] activation_top_col0,
     input signed [7:0] activation_top_col1,
@@ -42,8 +41,7 @@ module SystolicArray (
     /* verilator lint_off PINCONNECTEMPTY */
     MacPE pe00 (
         .clk(clk), .rst(rst), .clear(clear), .enable(step),
-        .weight_load(weight_load), .weight_switch(weight_switch),
-        .shadow_weight_in(weight_00),
+        .weight_load(weight_load), .weight_in(weight_00),
         .activation_in(activation_top_col0),
         .activation_valid_in(activation_valid_col0),
         .activation_out(activation_00_to_10),
@@ -56,8 +54,7 @@ module SystolicArray (
 
     MacPE pe01 (
         .clk(clk), .rst(rst), .clear(clear), .enable(step),
-        .weight_load(weight_load), .weight_switch(weight_switch),
-        .shadow_weight_in(weight_10),
+        .weight_load(weight_load), .weight_in(weight_10),
         .activation_in(activation_top_col1),
         .activation_valid_in(activation_valid_col1),
         .activation_out(activation_01_to_11),
@@ -70,8 +67,7 @@ module SystolicArray (
 
     MacPE pe10 (
         .clk(clk), .rst(rst), .clear(clear), .enable(step),
-        .weight_load(weight_load), .weight_switch(weight_switch),
-        .shadow_weight_in(weight_01),
+        .weight_load(weight_load), .weight_in(weight_01),
         .activation_in(activation_00_to_10),
         .activation_valid_in(activation_00_to_10_valid),
         .activation_out(), .activation_valid_out(),
@@ -83,8 +79,7 @@ module SystolicArray (
 
     MacPE pe11 (
         .clk(clk), .rst(rst), .clear(clear), .enable(step),
-        .weight_load(weight_load), .weight_switch(weight_switch),
-        .shadow_weight_in(weight_11),
+        .weight_load(weight_load), .weight_in(weight_11),
         .activation_in(activation_01_to_11),
         .activation_valid_in(activation_01_to_11_valid),
         .activation_out(), .activation_valid_out(),

@@ -17,14 +17,14 @@ Tile边界测试还包括地址FF回绕、忙时请求延迟执行、85个运算
 ```bash
 make test
 make lint
-make official-check MPSOC_DIGITAL=~/mpsoc-digital
-make official-export MPSOC_DIGITAL=~/mpsoc-digital
+make official-check
+make official-export
 make gls ICS55_PDK=~/pdk/icsprout55-pdk
 make multi-corner ICS55_PDK=~/pdk/icsprout55-pdk
 make release-check
 ```
 
-官方 `check`覆盖接口检查、Lint、Unit 与 Harness；`official-export`还生成最终 `Tile`并执行 `export-check`。本地通过不等价于官方通过，两者都应作为提交门槛。
+项目根目录存在 `mpsoc-digital/` 时会自动使用该模板；也可显式设置 `MPSOC_DIGITAL`。官方 `check`覆盖接口检查、Lint、Unit 与 Harness；`official-export`还生成最终 `Tile`并执行 `export-check`。本地通过不等价于官方通过，两者都应作为提交门槛。
 
 `make release-check`重新运行本地验证、官方导出、门级仿真和PPA/多角估算，将源码哈希、工具版本、导出包和报告保存在`build/releases/`。任一步工具/功能检查失败，生成失败记录并停止；时序负裕量如实标为NOT_MET，不会宣称签核通过。
 

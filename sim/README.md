@@ -22,13 +22,13 @@ name activation_hex weight_hex bias_hex shift expected_hex error_hex
 - `error_hex`是Golden Model生成的预期Sticky Error Code（粘滞错误码）；
 - 所有负数均使用二补码位型。
 
-驻留权重测试从这些golden向量中选取专用定向用例，测试驱动只改变权重装载和
-切换时序，不在C++中手算expected。
+驻留权重测试从这些golden向量中选取专用定向用例，检查单Bank权重装载、复用、
+未装载即启动和忙时装载拒绝，不在C++中手算expected。
 
 Core已移除Direct Mode。批量Testbench对每一个向量都执行：
 
 ```text
-weight_load → weight_switch → start → wait(done) → compare
+weight_load → start → wait(done) → compare
 ```
 
 生成10个随机用例进行快速调试：

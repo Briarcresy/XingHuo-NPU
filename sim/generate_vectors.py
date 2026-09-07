@@ -40,11 +40,11 @@ def directed_cases() -> list[NamedCase]:
         NamedCase("bias_boundaries", NpuInputs(Matrix2x2(1, 1, 1, 1), Matrix2x2(1, 1, 1, 1), INT32_MAX, INT32_MIN, 0)),
         # Weight-resident（权重驻留）定向用例：前两例复用同一权重；
         # 后两例用相同Activation
-        # 对比切换前后的两组权重。expected仍全部由golden model生成。
+        # 对比单Bank更新前后的两组权重。expected仍全部由golden model生成。
         NamedCase("resident_reuse_a", NpuInputs(Matrix2x2(2, -3, 4, 5), Matrix2x2(1, 2, -1, 3), 7, -9, 1)),
         NamedCase("resident_reuse_b", NpuInputs(Matrix2x2(-6, 7, 8, -9), Matrix2x2(1, 2, -1, 3), 7, -9, 1)),
-        NamedCase("resident_shadow_old", NpuInputs(Matrix2x2(3, 4, -5, 6), Matrix2x2(1, 2, -1, 3), 0, 0, 0)),
-        NamedCase("resident_shadow_new", NpuInputs(Matrix2x2(3, 4, -5, 6), Matrix2x2(-2, 5, 7, -4), 0, 0, 0)),
+        NamedCase("resident_active_old", NpuInputs(Matrix2x2(3, 4, -5, 6), Matrix2x2(1, 2, -1, 3), 0, 0, 0)),
+        NamedCase("resident_active_new", NpuInputs(Matrix2x2(3, 4, -5, 6), Matrix2x2(-2, 5, 7, -4), 0, 0, 0)),
     ]
 
 

@@ -45,9 +45,8 @@ constexpr int kMaximumWaitCycles = 32;
 constexpr int kMaximumReportedFailures = 10;
 constexpr std::uint16_t kExpectedCoreCycles = 7;
 constexpr std::uint8_t kErrorStartWhileBusy = 1U << 0;
-constexpr std::uint8_t kErrorSwitchWhileBusy = 1U << 2;
+constexpr std::uint8_t kErrorLoadWhileBusy = 1U << 2;
 constexpr std::uint8_t kErrorStartWithoutWeight = 1U << 3;
-constexpr std::uint8_t kErrorSwitchWithoutShadow = 1U << 4;
 
 struct TestVector {
     std::string name;
@@ -240,8 +239,7 @@ public:
 
     bool load_weight_and_run(const TestVector& vector, std::size_t index, bool report_failure)
     {
-        load_shadow(vector.weight);
-        switch_weights();
+        load_weight(vector.weight);
         return run(vector, index, report_failure);
     }
 
@@ -283,11 +281,11 @@ public:
     {
         const TestVector& reuse_a = find_vector(vector_set, "resident_reuse_a");
         const TestVector& reuse_b = find_vector(vector_set, "resident_reuse_b");
-        const TestVector& shadow_old = find_vector(vector_set, "resident_shadow_old");
-        const TestVector& shadow_new = find_vector(vector_set, "resident_shadow_new");
+        const TestVector& active_old = find_vector(vector_set, "resident_active_old");
+        const TestVector& active_new = find_vector(vector_set, "resident_active_new");
 
         reset();
-        // active bank尚未装载时，start必须被拒绝并留下可诊断错误。
+        // 当前权重尚未装载时，start必须被拒绝并留下可诊断错误。
         dut_.start = 1;
         tick();
         dut_.start = 0;
@@ -297,65 +295,41 @@ public:
         }
         clear_errors();
 
-        load_shadow(reuse_a.weight);
-        if (!dut_.shadow_weight_valid || dut_.active_weight_valid) {
-            std::cerr << "FAIL resident: shadow load validity is incorrect\n";
-            return false;
-        }
-        switch_weights();
-        if (!dut_.active_weight_valid || dut_.shadow_weight_valid) {
-            std::cerr << "FAIL resident: active/shadow validity after switch is incorrect\n";
+        load_weight(reuse_a.weight);
+        if (!dut_.weight_valid) {
+            std::cerr << "FAIL resident: single-bank load validity is incorrect\n";
             return false;
         }
 
-        // weight_matrix端口随后变化也不能影响active bank；两次任务复用同一权重。
+        // weight_matrix端口随后变化也不能影响已装载权重；两次任务复用同一权重。
         if (!run(reuse_a, 0, true) || !run(reuse_b, 1, true)) {
-            std::cerr << "FAIL resident: active weight reuse produced a wrong result\n";
+            std::cerr << "FAIL resident: weight reuse produced a wrong result\n";
             return false;
         }
 
-        // 当前任务使用旧active权重，同时把下一组权重装入shadow。
-        load_inputs(shadow_old);
+        // busy期间的装载必须被拒绝，且不能扰动当前任务使用的权重。
+        load_inputs(active_old);
         clear_errors();
         dut_.start = 1;
         tick();
         dut_.start = 0;
-        load_shadow(shadow_new.weight);
-        if (!wait_for_done() || dut_.result_matrix != shadow_old.expected) {
-            std::cerr << "FAIL resident: loading shadow disturbed active computation\n";
-            return false;
-        }
-
-        // busy期间切换必须被拒绝；上面的任务已结束，因此另起任务触发此检查。
-        load_inputs(shadow_old);
-        clear_errors();
-        dut_.start = 1;
+        dut_.weight_matrix = active_new.weight;
+        dut_.weight_load = 1;
         tick();
-        dut_.start = 0;
-        dut_.weight_switch = 1;
-        tick();
-        dut_.weight_switch = 0;
-        if (!(dut_.error_code & kErrorSwitchWhileBusy)) {
-            std::cerr << "FAIL resident: switch while busy was not reported\n";
+        dut_.weight_load = 0;
+        if (!(dut_.error_code & kErrorLoadWhileBusy)) {
+            std::cerr << "FAIL resident: load while busy was not reported\n";
             return false;
         }
-        if (!wait_for_done() || dut_.result_matrix != shadow_old.expected) {
-            std::cerr << "FAIL resident: rejected switch disturbed active computation\n";
+        if (!wait_for_done() || dut_.result_matrix != active_old.expected) {
+            std::cerr << "FAIL resident: rejected load disturbed active computation\n";
             return false;
         }
 
         clear_errors();
-        switch_weights();
-        if (!run(shadow_new, 4, true)) {
-            std::cerr << "FAIL resident: switched active weight produced a wrong result\n";
-            return false;
-        }
-
-        // shadow已被消费，再次switch必须被拒绝。
-        clear_errors();
-        switch_weights();
-        if (!(dut_.error_code & kErrorSwitchWithoutShadow)) {
-            std::cerr << "FAIL resident: empty shadow switch was not reported\n";
+        load_weight(active_new.weight);
+        if (!run(active_new, 3, true)) {
+            std::cerr << "FAIL resident: updated single-bank weight produced a wrong result\n";
             return false;
         }
 
@@ -373,7 +347,6 @@ private:
         dut_.start = 0;
         dut_.clear_error = 0;
         dut_.weight_load = 0;
-        dut_.weight_switch = 0;
         dut_.activation_matrix = 0;
         dut_.weight_matrix = 0;
         dut_.bias_vector = 0;
@@ -438,19 +411,12 @@ private:
         return false;
     }
 
-    void load_shadow(std::uint32_t weight)
+    void load_weight(std::uint32_t weight)
     {
         dut_.weight_matrix = weight;
         dut_.weight_load = 1;
         tick();
         dut_.weight_load = 0;
-    }
-
-    void switch_weights()
-    {
-        dut_.weight_switch = 1;
-        tick();
-        dut_.weight_switch = 0;
     }
 
     static const TestVector& find_vector(const VectorSet& vector_set, const std::string& name)

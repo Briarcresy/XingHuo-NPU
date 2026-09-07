@@ -9,8 +9,7 @@ module ButtonConditioner #(
     output logic [7:0] buttons_stable,
     output logic [7:0] button_pressed
 );
-    localparam integer COUNTER_WIDTH =
-        (DEBOUNCE_CYCLES <= 1) ? 1 : $clog2(DEBOUNCE_CYCLES);
+    localparam integer COUNTER_WIDTH = (DEBOUNCE_CYCLES <= 1) ? 1 : $clog2(DEBOUNCE_CYCLES);
 
     (* ASYNC_REG = "TRUE" *) logic [7:0] buttons_meta;
     (* ASYNC_REG = "TRUE" *) logic [7:0] buttons_sync;
@@ -26,8 +25,8 @@ module ButtonConditioner #(
             stable_counter <= '0;
             button_pressed <= '0;
         end else begin
-            buttons_meta <= buttons_async;
-            buttons_sync <= buttons_meta;
+            buttons_meta   <= buttons_async;
+            buttons_sync   <= buttons_meta;
             button_pressed <= '0;
 
             if (buttons_sync != candidate) begin

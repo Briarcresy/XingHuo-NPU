@@ -42,22 +42,20 @@ module XorNetworkController (
     localparam logic [4:0] ST_LOAD_BIAS1    = 5'd4;
     localparam logic [4:0] ST_LOAD_SHIFT1   = 5'd5;
     localparam logic [4:0] ST_CORE_WLOAD1   = 5'd6;
-    localparam logic [4:0] ST_CORE_WSWITCH1 = 5'd7;
-    localparam logic [4:0] ST_CORE_START1   = 5'd8;
-    localparam logic [4:0] ST_CORE_WAIT1    = 5'd9;
-    localparam logic [4:0] ST_WRITE_HIDDEN  = 5'd10;
-    localparam logic [4:0] ST_LOAD_WEIGHT2  = 5'd11;
-    localparam logic [4:0] ST_LOAD_BIAS2    = 5'd12;
-    localparam logic [4:0] ST_LOAD_SHIFT2   = 5'd13;
-    localparam logic [4:0] ST_CORE_WLOAD2   = 5'd14;
-    localparam logic [4:0] ST_CORE_WSWITCH2 = 5'd15;
-    localparam logic [4:0] ST_CORE_START2   = 5'd16;
-    localparam logic [4:0] ST_CORE_WAIT2    = 5'd17;
-    localparam logic [4:0] ST_WRITE_OUTPUT  = 5'd18;
-    localparam logic [4:0] ST_WRITE_CLASS   = 5'd19;
-    localparam logic [4:0] ST_WRITE_STATUS  = 5'd20;
-    localparam logic [4:0] ST_WRITE_ERROR   = 5'd21;
-    localparam logic [4:0] ST_FINISH        = 5'd22;
+    localparam logic [4:0] ST_CORE_START1   = 5'd7;
+    localparam logic [4:0] ST_CORE_WAIT1    = 5'd8;
+    localparam logic [4:0] ST_WRITE_HIDDEN  = 5'd9;
+    localparam logic [4:0] ST_LOAD_WEIGHT2  = 5'd10;
+    localparam logic [4:0] ST_LOAD_BIAS2    = 5'd11;
+    localparam logic [4:0] ST_LOAD_SHIFT2   = 5'd12;
+    localparam logic [4:0] ST_CORE_WLOAD2   = 5'd13;
+    localparam logic [4:0] ST_CORE_START2   = 5'd14;
+    localparam logic [4:0] ST_CORE_WAIT2    = 5'd15;
+    localparam logic [4:0] ST_WRITE_OUTPUT  = 5'd16;
+    localparam logic [4:0] ST_WRITE_CLASS   = 5'd17;
+    localparam logic [4:0] ST_WRITE_STATUS  = 5'd18;
+    localparam logic [4:0] ST_WRITE_ERROR   = 5'd19;
+    localparam logic [4:0] ST_FINISH        = 5'd20;
 
     logic [4:0] state;
     logic [3:0] byte_index;
@@ -70,14 +68,12 @@ module XorNetworkController (
     logic core_start;
     logic core_clear_error;
     logic core_weight_load;
-    logic core_weight_switch;
     wire core_busy;
     wire core_done;
     wire [31:0] core_result;
     wire core_error;
     wire [4:0] core_error_code;
-    wire active_weight_valid;
-    wire shadow_weight_valid;
+    wire weight_valid;
     wire [15:0] cycle_count;
     wire [31:0] task_count;
 
@@ -134,7 +130,6 @@ module XorNetworkController (
         core_clear_error   = (state == ST_CORE_CLEAR)
                            || ((state == ST_IDLE) && clear_status);
         core_weight_load   = (state == ST_CORE_WLOAD1) || (state == ST_CORE_WLOAD2);
-        core_weight_switch = (state == ST_CORE_WSWITCH1) || (state == ST_CORE_WSWITCH2);
     end
 
     always_ff @(posedge clock) begin
@@ -213,8 +208,7 @@ module XorNetworkController (
                     quant_shift <= ram_read_data[4:0];
                     state <= ST_CORE_WLOAD1;
                 end
-                ST_CORE_WLOAD1:   state <= ST_CORE_WSWITCH1;
-                ST_CORE_WSWITCH1: state <= ST_CORE_START1;
+                ST_CORE_WLOAD1:   state <= ST_CORE_START1;
                 ST_CORE_START1:   state <= ST_CORE_WAIT1;
                 ST_CORE_WAIT1: begin
                     if (core_done) begin
@@ -258,8 +252,7 @@ module XorNetworkController (
                     quant_shift <= ram_read_data[4:0];
                     state <= ST_CORE_WLOAD2;
                 end
-                ST_CORE_WLOAD2:   state <= ST_CORE_WSWITCH2;
-                ST_CORE_WSWITCH2: state <= ST_CORE_START2;
+                ST_CORE_WLOAD2:   state <= ST_CORE_START2;
                 ST_CORE_START2:   state <= ST_CORE_WAIT2;
                 ST_CORE_WAIT2: begin
                     if (core_done) begin
@@ -299,7 +292,6 @@ module XorNetworkController (
         .start(core_start),
         .clear_error(core_clear_error),
         .weight_load(core_weight_load),
-        .weight_switch(core_weight_switch),
         .activation_matrix(activation_matrix),
         .weight_matrix(weight_matrix),
         .bias_vector(bias_vector),
@@ -309,8 +301,7 @@ module XorNetworkController (
         .result_matrix(core_result),
         .error(core_error),
         .error_code(core_error_code),
-        .active_weight_valid(active_weight_valid),
-        .shadow_weight_valid(shadow_weight_valid),
+        .weight_valid(weight_valid),
         .cycle_count(cycle_count),
         .task_count(task_count)
     );

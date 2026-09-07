@@ -109,12 +109,12 @@ make test
 它执行 Python Golden Model 单元测试、1016 组 Core 定向/随机向量、160组可编程两层网络、手动/外部协议边界、Core/Tile SVA和四态RTL测试。expected由Python Golden Model自动生成。
 
 ```bash
-make doctor MPSOC_DIGITAL=~/mpsoc-digital
-make official-check MPSOC_DIGITAL=~/mpsoc-digital
-make official-export MPSOC_DIGITAL=~/mpsoc-digital
+make doctor
+make official-check
+make official-export
 ```
 
-第二条命令同时运行 `export-check`。具体分层见 [验证说明](docs/verification.md)。
+项目根目录存在 `mpsoc-digital/` 时会自动使用该模板，也可通过 `MPSOC_DIGITAL=/path/to/mpsoc-digital` 覆盖。`official-export` 会在导出后运行 `export-check`。具体分层见 [验证说明](docs/verification.md)。
 
 ## PPA 估算
 
@@ -127,8 +127,8 @@ make release-check
 
 该流程综合完整 `XingHuoNpuTile`。PPA 是前端估算，不等于布局布线后的签核结果，详见 [PPA 说明](ppa/README.md)。
 
-新版ICS55、100 MHz、完整探索性IO预算下的TT估算：6380个标准单元，面积
-13325.20 μm²，Setup WNS 5.111 ns、Hold WNS 0.012 ns。功耗0.1864 W使用默认
+新版ICS55、100 MHz、完整探索性IO预算下的TT估算：6228个标准单元，面积
+13134.24 μm²，Setup WNS 5.104 ns、Hold WNS 0.012 ns。功耗0.1837 W使用默认
 活动率。其他库角存在hold风险，应查看`build/ppa/XingHuoNpuTile-main-100MHz-RVT/corners/summary.md`。
 最终状态、缺少的平台输入和交付包说明见[流片准备记录](docs/tapeout-readiness.md)。
 

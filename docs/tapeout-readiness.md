@@ -17,13 +17,13 @@
 
 | RVT库角 | Setup WNS / ns | Hold WNS / ns | 结果 |
 | --- | ---: | ---: | --- |
-| ff_cbest_1p32_125 | 5.301 | -0.018 | Hold未满足 |
-| ff_rcbest_1p08_125 | 5.138 | 0.009 | 满足当前预算 |
-| ff_rcbest_1p32_m40 | 5.350 | -0.030 | Hold未满足 |
-| ss_cworst_1p08_m40 | 3.620 | 0.101 | 满足当前预算 |
-| ss_rcworst_1p08_125 | 3.674 | 0.105 | 满足当前预算 |
-| ss_rcworst_1p2_m40 | 4.937 | 0.034 | 满足当前预算 |
-| typ_tt_1p2_25 | 5.111 | 0.012 | 满足当前预算 |
+| ff_cbest_1p32_125 | 5.316 | -0.018 | Hold未满足 |
+| ff_rcbest_1p08_125 | 5.153 | 0.009 | 满足当前预算 |
+| ff_rcbest_1p32_m40 | 5.392 | -0.030 | Hold未满足 |
+| ss_cworst_1p08_m40 | 3.360 | 0.101 | 满足当前预算 |
+| ss_rcworst_1p08_125 | 3.443 | 0.105 | 满足当前预算 |
+| ss_rcworst_1p2_m40 | 4.882 | 0.034 | 满足当前预算 |
+| typ_tt_1p2_25 | 5.104 | 0.012 | 满足当前预算 |
 
 该表记录本次验证结果；后续RTL、工具或库更新后以`make release-check`生成的包内报告为准。
 
@@ -48,6 +48,6 @@
 执行`make release-check`。每次运行生成独立的`build/releases/<UTC时间>/`，包括检查日志、源码快照、官方Tile导出、PPA报告及`manifest.json`，并生成同名tar.gz。
 脚本在验证前后比较源码哈希，防止运行中源码变更导致报告与交付不一致。不会自动提交Git、上传或发起流片。
 官方导出工具会复制整个输入目录，因此本项目先在`build/official/source-*`准备干净源码目录，再运行官方export/export-check。最终包不得包含`.git`、本地工具、旧build或reference目录；release检查会拒绝这类意外内容。
-官方检查完成后立即冻结导出包，避免后续框架目录清理影响归档。若存在`build/mpsoc-digital/Makefile`，本项目优先使用该独立框架副本；否则使用`~/mpsoc-digital`，也可显式设置`MPSOC_DIGITAL`。
+官方检查完成后立即冻结导出包，避免后续框架目录清理影响归档。若存在项目根目录下的`mpsoc-digital/Makefile`，本项目优先使用该本地模板；否则使用`~/mpsoc-digital`，也可显式设置`MPSOC_DIGITAL`。模板目录必须保留在`.gitignore`中，官方导出只接受`scripts/prepare_official.py`生成的最小源码目录，避免导出器递归复制嵌套仓库。
 
 包内的`frontend_checks_passed`描述工具与功能检查，`prelayout_timing_met`描述探索性约束下的时序结果；`tapeout_signoff`固定为false，因为此脚本不执行物理签核。提交前应由最终平台补齐上表资料和责任分工。

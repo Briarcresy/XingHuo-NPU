@@ -12,10 +12,8 @@ module XingHuo_NPU (
     input start,
     // 清除Sticky Error（粘滞错误）；不影响当前计算、结果和Performance Counter。
     input clear_error,
-    // Weight-resident（权重驻留）接口：weight_load写入各PE的Shadow Bank；
-    // weight_switch在空闲时执行整组Atomic Switch（原子切换）到Active Bank。
+    // Weight-resident（权重驻留）接口：空闲时weight_load直接更新各PE的当前权重。
     input weight_load,
-    input weight_switch,
 
     // A和W每个元素为8位有符号INT8，从低位到高位依次为00、01、10、11。
     input [31:0] activation_matrix,
@@ -32,10 +30,10 @@ module XingHuo_NPU (
 
     // 可观测性接口；各错误位定义见docs/interfaces.md。
     output       error,
-    // 5个错误事件各占一位，不保留没有实际含义的高位。
+    // bit0=start while busy，bit1=bias overflow，bit2=weight load while busy，
+    // bit3=start without weight，bit4保留为0。
     output [4:0] error_code,
-    output       active_weight_valid,
-    output       shadow_weight_valid,
+    output       weight_valid,
     // 最近一个成功任务从接受start到产生done所经历的Core工作周期数。
     output reg [15:0] cycle_count,
     // 复位以来成功完成的任务总数；自然按32位回绕。
@@ -65,22 +63,19 @@ module XingHuo_NPU (
 
     reg start_while_busy_error;
     reg bias_overflow_error;
-    reg weight_switch_busy_error;
+    reg weight_load_busy_error;
     reg start_without_weight_error;
-    reg weight_switch_empty_error;
     reg [15:0] current_cycle_count;
-    reg active_weight_valid_reg;
-    reg shadow_weight_valid_reg;
+    reg weight_valid_reg;
 
     wire accepted_start;
-    wire weight_switch_commit;
+    wire weight_load_commit;
 
-    assign accepted_start = start && active_weight_valid_reg;
-    assign weight_switch_commit = weight_switch && !busy && shadow_weight_valid_reg;
-    assign active_weight_valid = active_weight_valid_reg;
-    assign shadow_weight_valid = shadow_weight_valid_reg;
-    assign error_code = {weight_switch_empty_error, start_without_weight_error,
-                         weight_switch_busy_error, bias_overflow_error,
+    assign accepted_start = start && weight_valid_reg;
+    assign weight_load_commit = weight_load && !busy;
+    assign weight_valid = weight_valid_reg;
+    assign error_code = {1'b0, start_without_weight_error,
+                         weight_load_busy_error, bias_overflow_error,
                          start_while_busy_error};
     assign error      = |error_code;
 
@@ -110,8 +105,7 @@ module XingHuo_NPU (
         .rst(rst),
         .clear(array_clear),
         .step(array_step),
-        .weight_load(weight_load),
-        .weight_switch(weight_switch_commit),
+        .weight_load(weight_load_commit),
         .weight_matrix(weight_matrix),
         .activation_top_col0(activation_top_col0),
         .activation_top_col1(activation_top_col1),
@@ -157,38 +151,29 @@ module XingHuo_NPU (
         if (rst) begin
             start_while_busy_error <= 1'b0;
             bias_overflow_error    <= 1'b0;
-            weight_switch_busy_error <= 1'b0;
+            weight_load_busy_error <= 1'b0;
             start_without_weight_error <= 1'b0;
-            weight_switch_empty_error <= 1'b0;
         end else begin
             if (clear_error) begin
                 start_while_busy_error <= 1'b0;
                 bias_overflow_error    <= 1'b0;
-                weight_switch_busy_error <= 1'b0;
+                weight_load_busy_error <= 1'b0;
                 start_without_weight_error <= 1'b0;
-                weight_switch_empty_error <= 1'b0;
             end
             if (start && busy) start_while_busy_error <= 1'b1;
             if (result_write_enable && bias_overflow) bias_overflow_error <= 1'b1;
-            if (weight_switch && busy) weight_switch_busy_error <= 1'b1;
-            if (start && !busy && !active_weight_valid_reg)
+            if (weight_load && busy) weight_load_busy_error <= 1'b1;
+            if (start && !busy && !weight_valid_reg)
                 start_without_weight_error <= 1'b1;
-            if (weight_switch && !busy && !shadow_weight_valid_reg)
-                weight_switch_empty_error <= 1'b1;
         end
     end
 
-    // Valid Bit（有效位）描述两个Weight Bank的所有权。load与合法switch可以同拍：
-    // 旧Shadow切换为Active，同时weight_matrix成为新Shadow，便于流水准备下一组权重。
+    // 单Bank有效位：复位后必须先在空闲状态装载一次完整权重矩阵。
     always @(posedge clk) begin
         if (rst) begin
-            active_weight_valid_reg <= 1'b0;
-            shadow_weight_valid_reg <= 1'b0;
+            weight_valid_reg <= 1'b0;
         end else begin
-            if (weight_switch_commit) active_weight_valid_reg <= 1'b1;
-
-            if (weight_load) shadow_weight_valid_reg <= 1'b1;
-            else if (weight_switch_commit) shadow_weight_valid_reg <= 1'b0;
+            if (weight_load_commit) weight_valid_reg <= 1'b1;
         end
     end
 
