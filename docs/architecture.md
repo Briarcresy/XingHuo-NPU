@@ -3,9 +3,9 @@
 设计分成可复用的 NPU Core 和 MPSoC-Digital Tile Adapter（Tile 适配层）。Core 不知道按钮、LED、外部命令和 Shared RAM；适配层负责把平台资源变成 Core 任务。
 
 ```text
-io_btn/io_dip -> ButtonConditioner -> ManualInputController --+
+io_btn/io_dip -> TileInputSynchronizer -> ButtonConditioner/ManualInputController --+
                                                              |
-io_customIn -> ExternalHostInterface -------------------------+-> RAM Arbiter
+io_customIn -> TileInputSynchronizer -> ExternalHostInterface ------------------+-> RAM Arbiter
                                                                     |
 SoC Shared RAM <----------------------------------------------------+
        |

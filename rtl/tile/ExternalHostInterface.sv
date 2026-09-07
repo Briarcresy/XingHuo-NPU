@@ -5,7 +5,7 @@ module ExternalHostInterface (
     input  logic        reset,
     input  logic        enable,
     input  logic        network_busy,
-    input  logic [15:0] custom_in_async,
+    input  logic [15:0] custom_in_sync,
     input  logic [ 7:0] ram_read_data,
     output logic        external_mode_request,
     output logic [ 7:0] ram_address,
@@ -25,8 +25,6 @@ module ExternalHostInterface (
     localparam logic [2:0] OP_START_DEMO  = 3'd4;
     localparam logic [2:0] OP_CLEAR       = 3'd5;
 
-    (* ASYNC_REG = "TRUE" *) logic [15:0] custom_in_meta;
-    (* ASYNC_REG = "TRUE" *) logic [15:0] custom_in_sync;
     logic [7:0] address_pointer;
     logic [7:0] write_address;
     logic write_pending;
@@ -44,8 +42,6 @@ module ExternalHostInterface (
 
     always_ff @(posedge clock) begin
         if (reset) begin
-            custom_in_meta      <= '0;
-            custom_in_sync      <= '0;
             address_pointer     <= 8'h00;
             write_address       <= 8'h00;
             ram_write_request   <= 1'b0;
@@ -59,9 +55,6 @@ module ExternalHostInterface (
             write_pending       <= 1'b0;
             pending_request_toggle <= 1'b0;
         end else begin
-            custom_in_meta <= custom_in_async;
-            custom_in_sync <= custom_in_meta;
-
             ram_write_request  <= 1'b0;
             start_programmable <= 1'b0;
             start_demo         <= 1'b0;

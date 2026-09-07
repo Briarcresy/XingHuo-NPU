@@ -22,19 +22,9 @@ module XingHuoNpuTile #(
 );
     logic [7:0] buttons_stable;
     logic [7:0] button_pressed;
-    // 标记同步链供后端CDC/布局工具识别；多位DIP仍须在按键采样前稳定。
-    (* ASYNC_REG = "TRUE" *) logic [7:0] dip_meta;
-    (* ASYNC_REG = "TRUE" *) logic [7:0] dip_sync;
-
-    always_ff @(posedge clock) begin
-        if (reset) begin
-            dip_meta <= '0;
-            dip_sync <= '0;
-        end else begin
-            dip_meta <= io_dip;
-            dip_sync <= dip_meta;
-        end
-    end
+    logic [7:0] buttons_sync;
+    logic [7:0] dip_sync;
+    logic [15:0] custom_in_sync;
 
     logic external_mode_request;
     logic external_mode;
@@ -77,12 +67,23 @@ module XingHuoNpuTile #(
     logic [3:0] hex_low;
     logic [3:0] hex_high;
 
+    TileInputSynchronizer input_synchronizer (
+        .clock(clock),
+        .reset(reset),
+        .buttons_async(io_btn),
+        .dip_async(io_dip),
+        .custom_in_async(io_customIn),
+        .buttons_sync(buttons_sync),
+        .dip_sync(dip_sync),
+        .custom_in_sync(custom_in_sync)
+    );
+
     ButtonConditioner #(
         .DEBOUNCE_CYCLES(BUTTON_DEBOUNCE_CYCLES)
     ) button_conditioner (
         .clock(clock),
         .reset(reset),
-        .buttons_async(io_btn),
+        .buttons_sync(buttons_sync),
         .buttons_stable(buttons_stable),
         .button_pressed(button_pressed)
     );
@@ -109,7 +110,7 @@ module XingHuoNpuTile #(
         .reset(reset),
         .enable(external_mode && external_mode_request),
         .network_busy(network_busy),
-        .custom_in_async(io_customIn),
+        .custom_in_sync(custom_in_sync),
         .ram_read_data(io_ramRdata),
         .external_mode_request(external_mode_request),
         .ram_address(host_ram_address),
