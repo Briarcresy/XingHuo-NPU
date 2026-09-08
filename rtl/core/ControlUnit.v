@@ -8,73 +8,75 @@ module ControlUnit (
     input rst,
     input start,
 
-    output reg        busy,
+    output            busy,
     output reg        done,
     output reg  [1:0] phase,
     output array_clear,
     output array_step,
     output result_write_enable
 );
-    localparam [2:0] IDLE = 3'd0;
-    localparam [2:0] CLEAR = 3'd1;
-    localparam [2:0] RUN = 3'd2;
-    localparam [2:0] COLLECT = 3'd3;
-    localparam [2:0] WRITE_RESULT = 3'd4;
+    localparam [2:0] STATE_IDLE         = 3'd0;
+    localparam [2:0] STATE_CLEAR        = 3'd1;
+    localparam [2:0] STATE_RUN          = 3'd2;
+    localparam [2:0] STATE_COLLECT      = 3'd3;
+    localparam [2:0] STATE_WRITE_RESULT = 3'd4;
 
     reg [2:0] state;
+    reg [2:0] next_state;
 
-    // 这些控制信号由当前状态直接译码，数据通路无需了解状态编码。
-    assign array_clear         = (state == CLEAR);
-    assign array_step          = (state == RUN);
-    assign result_write_enable = (state == WRITE_RESULT);
+    // Moore型输出只由当前状态决定。数据通路只看有意义的控制信号，无需了解
+    // FSM编码；busy也由状态派生，避免状态和单独busy寄存器发生不一致。
+    assign busy                = (state != STATE_IDLE);
+    assign array_clear         = (state == STATE_CLEAR);
+    assign array_step          = (state == STATE_RUN);
+    assign result_write_enable = (state == STATE_WRITE_RESULT);
 
+    // 两段式FSM的组合部分：先给“保持当前状态”的默认值，各分支只描述真正的
+    // 转移条件。default让非法编码能够自恢复到IDLE，也避免组合锁存器。
+    always @(*) begin
+        next_state = state;
+        case (state)
+            STATE_IDLE:
+                if (start) next_state = STATE_CLEAR;
+            STATE_CLEAR:
+                next_state = STATE_RUN;
+            STATE_RUN:
+                if (phase == 2'd3) next_state = STATE_COLLECT;
+            STATE_COLLECT:
+                next_state = STATE_WRITE_RESULT;
+            STATE_WRITE_RESULT:
+                next_state = STATE_IDLE;
+            default:
+                next_state = STATE_IDLE;
+        endcase
+    end
+
+    // 状态寄存器只负责保存FSM状态。
     always @(posedge clk) begin
-        if (rst) begin
-            state <= IDLE;
-            phase <= 2'd0;
-            busy  <= 1'b0;
-            done  <= 1'b0;
-        end else begin
-            // done 是单周期脉冲，只有 WRITE_RESULT 状态会将它置 1。
-            done <= 1'b0;
+        if (rst) state <= STATE_IDLE;
+        else state <= next_state;
+    end
 
+    // phase是RUN状态内部的微步骤计数器，与主状态寄存器分开。
+    always @(posedge clk) begin
+        if (rst) phase <= 2'd0;
+        else begin
             case (state)
-                IDLE: begin
-                    busy <= 1'b0;
-                    if (start) begin
-                        busy  <= 1'b1;
-                        phase <= 2'd0;
-                        state <= CLEAR;
-                    end
-                end
-
-                CLEAR: begin
+                STATE_IDLE:
+                    if (start) phase <= 2'd0;
+                STATE_CLEAR:
                     phase <= 2'd0;
-                    state <= RUN;
-                end
-
-                RUN: begin
-                    if (phase == 2'd3) state <= COLLECT;
-                    else phase <= phase + 1'b1;
-                end
-
-                COLLECT: begin
-                    // 给Result Collector一个周期锁存最后一个流水结果。
-                    state <= WRITE_RESULT;
-                end
-
-                WRITE_RESULT: begin
-                    busy  <= 1'b0;
-                    done  <= 1'b1;
-                    state <= IDLE;
-                end
-
-                default: begin
-                    state <= IDLE;
+                STATE_RUN:
+                    if (phase != 2'd3) phase <= phase + 1'b1;
+                default:
                     phase <= 2'd0;
-                    busy  <= 1'b0;
-                end
             endcase
         end
+    end
+
+    // done是独立的单周期事件：离开WRITE_RESULT的采样沿上，VPU也正好锁存结果。
+    always @(posedge clk) begin
+        if (rst) done <= 1'b0;
+        else done <= (state == STATE_WRITE_RESULT);
     end
 endmodule

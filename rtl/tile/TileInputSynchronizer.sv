@@ -20,21 +20,34 @@ module TileInputSynchronizer (
     (* ASYNC_REG = "TRUE" *)logic [15:0] custom_in_meta;
     (* ASYNC_REG = "TRUE" *)logic [15:0] custom_in_sync_reg;
 
+    // 三组同步链彼此独立，分别书写可避免以后修改一组信号时影响另外两组。
     always_ff @(posedge clock) begin
         if (reset) begin
-            buttons_meta       <= '0;
-            buttons_sync_reg   <= '0;
-            dip_meta           <= '0;
-            dip_sync_reg       <= '0;
-            custom_in_meta     <= '0;
-            custom_in_sync_reg <= '0;
+            buttons_meta     <= '0;
+            buttons_sync_reg <= '0;
         end else begin
             // 非阻塞赋值使sync_reg在本拍读取旧的meta，因此形成真正的两级流水，
             // 而不是同一拍穿过两级。总延迟通常为两个目标时钟采样沿。
-            buttons_meta       <= buttons_async;
-            buttons_sync_reg   <= buttons_meta;
-            dip_meta           <= dip_async;
-            dip_sync_reg       <= dip_meta;
+            buttons_meta     <= buttons_async;
+            buttons_sync_reg <= buttons_meta;
+        end
+    end
+
+    always_ff @(posedge clock) begin
+        if (reset) begin
+            dip_meta     <= '0;
+            dip_sync_reg <= '0;
+        end else begin
+            dip_meta     <= dip_async;
+            dip_sync_reg <= dip_meta;
+        end
+    end
+
+    always_ff @(posedge clock) begin
+        if (reset) begin
+            custom_in_meta     <= '0;
+            custom_in_sync_reg <= '0;
+        end else begin
             custom_in_meta     <= custom_in_async;
             custom_in_sync_reg <= custom_in_meta;
         end

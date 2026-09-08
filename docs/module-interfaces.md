@@ -180,9 +180,9 @@ Opcode：0 设置地址，1 写字节并递增地址，2 读字节并递增地�
 |---|---|---|
 | `clk` | 输入 1 bit | Core 工作时钟。 |
 | `rst` | 输入 1 bit | 同步高有效复位。 |
-| `start` | 输入 1 bit | 启动请求；空闲且 `weight_valid=1` 时接受。建议使用单周期脉冲。 |
+| `start` | 输入 1 bit | 启动 valid；内部 ready 条件为 `!busy && weight_valid`，二者同时成立的上升沿接受。建议使用单周期脉冲。 |
 | `clear_error` | 输入 1 bit | 清除粘滞错误，不影响当前任务、结果和性能计数。 |
-| `weight_load` | 输入 1 bit | 空闲时把完整 `weight_matrix` 装入四个 PE；忙时忽略并报错。 |
+| `weight_load` | 输入 1 bit | 权重装载 valid；内部 ready 条件为 `!busy`，二者同时成立的上升沿把完整 `weight_matrix` 装入四个 PE。 |
 | `activation_matrix` | 输入 32 bit | 2×2 INT8 激活矩阵，按通用矩阵约定打包；任务执行期间保持稳定。 |
 | `weight_matrix` | 输入 32 bit | 2×2 INT8 权重矩阵，在有效 `weight_load` 上升沿采样。 |
 | `bias_vector` | 输入 64 bit | `[31:0]=bias0`、`[63:32]=bias1`，分别按输出列广播；任务完成写结果时使用。 |

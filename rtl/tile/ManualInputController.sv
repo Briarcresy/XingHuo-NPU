@@ -27,53 +27,59 @@ module ManualInputController (
         else ram_address = address_pointer;
     end
 
+    // 地址指针单独处理；多个地址按钮同时按下时优先级为BTN2、BTN1、BTN0。
     always_ff @(posedge clock) begin
         if (reset) begin
-            address_pointer    <= 8'h00;
-            write_address      <= 8'h00;
-            ram_write_request  <= 1'b0;
-            ram_write_data     <= 8'h00;
+            address_pointer <= 8'h00;
+        end else if (enable && !network_busy) begin
+            if (button_pressed[2]) address_pointer <= dip_value;
+            else if (button_pressed[1]) address_pointer <= 8'h00;
+            else if (button_pressed[0]) address_pointer <= address_pointer + 1'b1;
+        end
+    end
+
+    // RAM写事务锁存地址和数据，并产生一个周期请求。
+    always_ff @(posedge clock) begin
+        if (reset) begin
+            write_address     <= 8'h00;
+            ram_write_data    <= 8'h00;
+            ram_write_request <= 1'b0;
+        end else begin
+            ram_write_request <= 1'b0;
+            if (enable && !network_busy && button_pressed[0]) begin
+                write_address     <= address_pointer;
+                ram_write_data    <= dip_value;
+                ram_write_request <= 1'b1;
+            end
+        end
+    end
+
+    // 网络控制事件均为单周期脉冲；Demo输入只在START_DEMO时锁存。
+    always_ff @(posedge clock) begin
+        if (reset) begin
             start_programmable <= 1'b0;
             start_demo         <= 1'b0;
             demo_input         <= 2'b00;
             clear_status       <= 1'b0;
-            display_page       <= PAGE_STATUS;
         end else begin
-            // 这些输出表示事件而非状态，每个周期先清零，再由本拍按钮覆盖。
-            ram_write_request  <= 1'b0;
-            start_programmable <= 1'b0;
-            start_demo         <= 1'b0;
-            clear_status       <= 1'b0;
+            start_programmable <= enable && !network_busy && button_pressed[3];
+            start_demo         <= enable && !network_busy && button_pressed[7];
+            clear_status       <= enable && !network_busy && button_pressed[6];
+            if (enable && !network_busy && button_pressed[7])
+                demo_input <= dip_value[1:0];
+        end
+    end
 
-            if (enable && !network_busy) begin
-                // BTN0：写入当前DIP字节，然后地址自动加一。
-                if (button_pressed[0]) begin
-                    ram_write_data    <= dip_value;
-                    write_address     <= address_pointer;
-                    ram_write_request <= 1'b1;
-                    address_pointer   <= address_pointer + 1'b1;
-                end
-                // BTN1：地址归零；BTN2：把当前DIP字节直接装入地址指针。
-                if (button_pressed[1]) address_pointer <= 8'h00;
-                if (button_pressed[2]) address_pointer <= dip_value;
-                // BTN3：使用RAM中的可编程参数运行完整两层网络。
-                if (button_pressed[3]) start_programmable <= 1'b1;
-                // BTN4/BTN5：循环切换显示页面。
-                if (button_pressed[4]) begin
-                    if (display_page == PAGE_CLASS) display_page <= PAGE_STATUS;
-                    else display_page <= display_page + 1'b1;
-                end
-                if (button_pressed[5]) begin
-                    if (display_page == PAGE_STATUS) display_page <= PAGE_CLASS;
-                    else display_page <= display_page - 1'b1;
-                end
-                // BTN6：清除完成和错误状态。
-                if (button_pressed[6]) clear_status <= 1'b1;
-                // BTN7：用DIP[1:0]启动固定参数的一键XOR演示。
-                if (button_pressed[7]) begin
-                    demo_input <= dip_value[1:0];
-                    start_demo <= 1'b1;
-                end
+    // 显示页状态独立于地址和命令；BTN5保持对同时按下的优先级。
+    always_ff @(posedge clock) begin
+        if (reset) display_page <= PAGE_STATUS;
+        else if (enable && !network_busy) begin
+            if (button_pressed[5]) begin
+                if (display_page == PAGE_STATUS) display_page <= PAGE_CLASS;
+                else display_page <= display_page - 1'b1;
+            end else if (button_pressed[4]) begin
+                if (display_page == PAGE_CLASS) display_page <= PAGE_STATUS;
+                else display_page <= display_page + 1'b1;
             end
         end
     end
