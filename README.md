@@ -146,6 +146,7 @@ make release-check
 
 - [架构说明](docs/architecture.md)
 - [RTL 模块接口说明](docs/module-interfaces.md)
+- [Tile RTL 学习导读：握手、仲裁、CDC 与状态机](docs/tile-rtl-study-guide.md)
 - [接口、RAM Map 与操作步骤](docs/interfaces.md)
 - [INT8 量化规则](docs/quantization.md)
 - [验证策略](docs/verification.md)

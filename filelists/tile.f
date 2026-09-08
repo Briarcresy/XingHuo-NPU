@@ -9,6 +9,7 @@ rtl/core/ResultCollector.v
 rtl/core/SystolicArray.v
 rtl/core/VPU.v
 rtl/core/XingHuo_NPU.v
+rtl/tile/TileTypesPkg.sv
 rtl/tile/TileInputSynchronizer.sv
 rtl/tile/ButtonConditioner.sv
 rtl/tile/ManualInputController.sv

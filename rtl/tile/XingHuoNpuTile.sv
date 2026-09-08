@@ -4,30 +4,32 @@ module XingHuoNpuTile #(
     // 默认按100 MHz时钟提供约10 ms机械按键稳定窗口。
     parameter integer BUTTON_DEBOUNCE_CYCLES = 1000000
 ) (
-    input  logic        clock,
-    input  logic        reset,
-    output logic [ 7:0] io_led,
-    output logic        io_ledUpdate,
-    input  logic [ 7:0] io_btn,
-    input  logic [ 7:0] io_dip,
-    output logic [ 3:0] io_hex7seg_0,
-    output logic [ 3:0] io_hex7seg_1,
-    output logic        io_hex7segUpdate,
-    output logic [15:0] io_customOut,
-    input  logic [15:0] io_customIn,
-    output logic [ 7:0] io_ramAddr,
-    output logic        io_ramWen,
-    output logic [ 7:0] io_ramWdata,
-    input  logic [ 7:0] io_ramRdata
+    input  logic        clock,            // MPSoC-Digital分配的Tile工作时钟。
+    input  logic        reset,            // 平台提供的同步高有效Tile复位。
+    output logic [ 7:0] io_led,           // 八个LED的待显示值。
+    output logic        io_ledUpdate,     // LED值更新有效，当前持续为1。
+    input  logic [ 7:0] io_btn,           // 外部机械按钮，属于异步输入。
+    input  logic [ 7:0] io_dip,           // 外部DIP开关，属于异步输入。
+    output logic [ 3:0] io_hex7seg_0,     // 低位十六进制显示值。
+    output logic [ 3:0] io_hex7seg_1,     // 高位十六进制显示值。
+    output logic        io_hex7segUpdate, // 数码管值更新有效，当前持续为1。
+    output logic [15:0] io_customOut,      // 外部主机响应、状态和协议版本。
+    input  logic [15:0] io_customIn,       // 外部主机模式/命令/Payload总线。
+    output logic [ 7:0] io_ramAddr,        // 共享256×8 RAM单端口地址。
+    output logic        io_ramWen,         // 共享RAM上升沿写使能。
+    output logic [ 7:0] io_ramWdata,       // 共享RAM写数据。
+    input  logic [ 7:0] io_ramRdata        // 当前地址对应的异步组合读数据。
 );
+    // Tile边界的三组异步输入在进入功能模块前统一同步。RAM读数据属于同一
+    // clock域资源的组合读口，必须保持与地址对应，因此不经过普通CDC同步器。
     logic [7:0] buttons_stable;
     logic [7:0] button_pressed;
     logic [7:0] buttons_sync;
     logic [7:0] dip_sync;
     logic [15:0] custom_in_sync;
 
-    logic external_mode_request;
-    logic external_mode;
+    logic external_mode_request; // 主机同步后的期望模式。
+    logic external_mode;         // 顶层已安全完成交接的实际模式。
 
     logic [7:0] manual_ram_address;
     logic manual_ram_write_request;
@@ -67,6 +69,27 @@ module XingHuoNpuTile #(
     logic [3:0] hex_low;
     logic [3:0] hex_high;
 
+    // 组合条件先命名再使用，波形和代码审查中都能直接看到“是否可交接”以及
+    // “哪个主设备获得RAM”这两个设计意图。这是总线仲裁器常见的grant写法。
+    logic mode_handoff_ready;
+    logic controller_ram_grant;
+    logic host_ram_grant;
+
+    always_comb begin
+        mode_handoff_ready = !network_busy
+                           && !manual_ram_write_request
+                           && !host_ram_write_request
+                           && !manual_start_programmable
+                           && !manual_start_demo
+                           && !host_start_programmable
+                           && !host_start_demo
+                           && !manual_clear_status
+                           && !host_clear_status;
+        controller_ram_grant = network_busy;
+        host_ram_grant       = !controller_ram_grant && external_mode;
+    end
+
+    // CDC边界：后续模块只能看到buttons_sync/dip_sync/custom_in_sync。
     TileInputSynchronizer input_synchronizer (
         .clock(clock),
         .reset(reset),
@@ -78,6 +101,7 @@ module XingHuoNpuTile #(
         .custom_in_sync(custom_in_sync)
     );
 
+    // 将同步按钮的机械抖动过滤，并把一次按下转换为一个周期事件。
     ButtonConditioner #(
         .DEBOUNCE_CYCLES(BUTTON_DEBOUNCE_CYCLES)
     ) button_conditioner (
@@ -88,6 +112,7 @@ module XingHuoNpuTile #(
         .button_pressed(button_pressed)
     );
 
+    // 手动控制器始终保存自己的地址和页面；只有手动模式且网络空闲时接收按钮。
     ManualInputController manual_controller (
         .clock(clock),
         .reset(reset),
@@ -105,6 +130,7 @@ module XingHuoNpuTile #(
         .display_page(display_page)
     );
 
+    // 主机接口始终观察同步模式请求；只有交接到外部模式后才执行新命令。
     ExternalHostInterface host_interface (
         .clock(clock),
         .reset(reset),
@@ -128,13 +154,11 @@ module XingHuoNpuTile #(
     // 不能只等busy：启动脉冲与network_busy之间存在一个交接周期。
     always_ff @(posedge clock) begin
         if (reset) external_mode <= 1'b0;
-        else if (!network_busy && !manual_ram_write_request && !host_ram_write_request
-                 && !manual_start_programmable && !manual_start_demo
-                 && !host_start_programmable && !host_start_demo
-                 && !manual_clear_status && !host_clear_status)
+        else if (mode_handoff_ready)
             external_mode <= external_mode_request;
     end
 
+    // 只把实际选中模式产生的控制事件送给两层网络控制器。
     always_comb begin
         if (external_mode) begin
             controller_start_programmable = host_start_programmable;
@@ -149,6 +173,7 @@ module XingHuoNpuTile #(
         end
     end
 
+    // 两层任务调度器内部复用同一个2×2 NPU Core，并在运行时取得RAM独占权。
     XorNetworkController xor_controller (
         .clock(clock),
         .reset(reset),
@@ -170,12 +195,13 @@ module XingHuoNpuTile #(
     );
 
     // Shared RAM端口仲裁：网络运行时控制器独占；空闲时交给所选输入模式。
+    // 优先级为网络 > 外部主机/手动。三个来源都使用同一地址、写使能和数据口。
     always_comb begin
-        if (network_busy) begin
+        if (controller_ram_grant) begin
             io_ramAddr  = controller_ram_address;
             io_ramWen   = controller_ram_write_enable;
             io_ramWdata = controller_ram_write_data;
-        end else if (external_mode) begin
+        end else if (host_ram_grant) begin
             io_ramAddr  = host_ram_address;
             io_ramWen   = host_ram_write_request;
             io_ramWdata = host_ram_write_data;
@@ -188,6 +214,7 @@ module XingHuoNpuTile #(
         if (reset) io_ramWen = 1'b0;
     end
 
+    // 显示逻辑只旁路观察内部状态，不参与任务控制或计算数据路径。
     DisplayController display_controller (
         .external_mode(external_mode),
         .display_page(display_page),
@@ -206,6 +233,8 @@ module XingHuoNpuTile #(
     );
 
     // Harness仅在Update为1时锁存显示值；持续置1表示每拍都反映最新状态。
+    // customOut位定义：7:0读数据，8 ACK，9网络忙，10完成，11 Core忙，
+    // 12错误，13分类，14实际外部模式，15协议版本1。
     always_comb begin
         io_led             = led_value;
         io_ledUpdate       = 1'b1;
