@@ -23,10 +23,9 @@ module DisplayController (
         case (display_page)
             4'd0: begin
                 led_value = {
-                    2'b00, external_mode, error, core_busy,
-                    network_busy, done, classification
+                    2'b00, external_mode, error, core_busy, network_busy, done, classification
                 };
-                hex_low  = {3'b000, classification};
+                hex_low = {3'b000, classification};
                 hex_high = 4'h0;
             end
             4'd1: begin
