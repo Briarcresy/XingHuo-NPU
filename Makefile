@@ -76,7 +76,7 @@ $(CORE_SIM): $(CORE_FILELIST) $(CORE_RTL) sim/XingHuo_NPU_sim.cpp
 	$(call print_info,Building Verilator Core model...)
 	@if ! $(VERILATOR) --cc --exe --build --language 1364-2005 \
 		$(VERILATOR_FLAGS) --top-module "$(CORE_TOP)" --Mdir "$(CORE_SIM_DIR)" \
-		-CFLAGS '-std=c++17' -f "$(CORE_FILELIST)" sim/XingHuo_NPU_sim.cpp \
+		-CFLAGS '-std=c++17' -f "$(CORE_FILELIST)" "$(CURDIR)/sim/XingHuo_NPU_sim.cpp" \
 		>"$(CORE_BUILD_LOG)" 2>&1; then \
 		printf '\033[1;31m%s\033[0m\n' 'ERROR: Core构建失败，日志末尾：' >&2; \
 		tail -n 80 "$(CORE_BUILD_LOG)"; exit 1; fi
