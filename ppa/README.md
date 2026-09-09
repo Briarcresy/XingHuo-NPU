@@ -1,6 +1,6 @@
 # PPA 估算
 
-本目录使用 Yosys、ICS55 Liberty 和 iEDA 对完整 `XingHuoNpuTile`进行前端 PPA 估算。RTL 来自 `filelists/tile.f`，默认时钟端口为 `clock`、频率为 100 MHz。
+本目录使用 Yosys、ICS55 Liberty 和 iEDA 对完整 `XingHuoNpuTile`进行前端 PPA 估算。RTL 来自 `filelists/tile.f`，默认时钟端口为 `clock`、频率为 200 MHz。
 
 ```bash
 make -C ppa check ICS55_PDK=~/pdk/icsprout55-pdk IEDA_BIN=/path/to/iEDA
@@ -9,7 +9,7 @@ make gls
 make multi-corner
 ```
 
-结果位于 `build/ppa/XingHuoNpuTile-main-100MHz-RVT/`：`synth_stat.txt`是面积，`XingHuoNpuTile.rpt`是 STA（静态时序分析），`XingHuoNpuTile.pwr`是默认活动率功耗，日志保存在 `yosys.log`和`sta.log`。
+结果位于 `build/ppa/XingHuoNpuTile-main-200MHz-RVT/`：`synth_stat.txt`是面积，`XingHuoNpuTile.rpt`是 STA（静态时序分析），`XingHuoNpuTile.pwr`是默认活动率功耗，日志保存在 `yosys.log`和`sta.log`。
 
 可用 `CLK_FREQ_MHZ=<MHz>`改变时钟假设。综合面积包含 Core 和 Tile 外围，但不包含 SoC 共享资源。结果不是 Placement and Routing（布局布线）后的签核。
 

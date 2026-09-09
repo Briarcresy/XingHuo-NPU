@@ -14,7 +14,7 @@
 重点观察：
 
 - `typedef enum logic [...]` 同时给出类型、位宽和合法编码；
-- `network_state_t state` 比 `logic [4:0] state` 更容易在波形中识别；
+- `NET_*` 命名状态常量比控制器内散落的裸数字更容易阅读和搜索；当前状态寄存器显式声明为 `logic [4:0]`，以兼容项目使用的 Yosys 前端；
 - package 必须在使用它的模块之前编译，所以它位于 `filelists/tile.f` 前部。
 
 ## 2. 看芯片边界：CDC 与功能逻辑分层
@@ -61,7 +61,7 @@ command_fire  = command_valid && command_ready;
 
 ## 5. 看状态机：控制通路与数据通路
 
-阅读 `XorNetworkController.sv`。`network_state_t` 状态机是控制通路，`activation_matrix`、`weight_matrix`、`bias_vector` 和结果寄存器是数据通路。
+阅读 `XorNetworkController.sv`。`NET_*` 命名的状态机是控制通路，`activation_matrix`、`weight_matrix`、`bias_vector` 和结果寄存器是数据通路。
 
 按以下四段看状态转移：
 

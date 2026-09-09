@@ -13,7 +13,7 @@
 | 网络工作流 | 两层 2×2 XOR 分类网络，由硬件自动调度 |
 | 输入方式 | Manual Mode（手动模式）与 External Host Mode（外部主机模式） |
 | 流片接口 | MPSoC-Digital 固定 Tile 接口、256×8 Shared RAM（共享存储器） |
-| 基准时钟 | 100 MHz（PPA 假设，最终以后端结果为准） |
+| 基准时钟 | 200 MHz（PPA 假设，最终以后端结果为准） |
 
 ## 工程结构
 
@@ -127,9 +127,10 @@ make release-check
 
 该流程综合完整 `XingHuoNpuTile`。PPA 是前端估算，不等于布局布线后的签核结果，详见 [PPA 说明](ppa/README.md)。
 
-新版ICS55、100 MHz、完整探索性IO预算下的TT估算：6228个标准单元，面积
-13134.24 μm²，Setup WNS 5.104 ns、Hold WNS 0.012 ns。功耗0.1837 W使用默认
-活动率。其他库角存在hold风险，应查看`build/ppa/XingHuoNpuTile-main-100MHz-RVT/corners/summary.md`。
+新版ICS55、200 MHz、完整探索性IO预算下的TT估算：6438个标准单元，面积
+13135.08 μm²，Setup WNS 0.021 ns、Hold WNS 0.012 ns。功耗0.2619 W使用默认
+活动率。部分慢角存在setup风险，部分快角存在hold风险，应查看
+`build/ppa/XingHuoNpuTile-main-200MHz-RVT/corners/summary.md`。
 最终状态、缺少的平台输入和交付包说明见[流片准备记录](docs/tapeout-readiness.md)。
 
 ## 实物连接边界与已知限制
@@ -138,7 +139,7 @@ make release-check
   引脚、电压、连接器和外部设备接法由最终 MPSoC-Digital 平台决定。
 - 不假设平台包含 CPU，也不依赖 Shared RAM 的复位初值。
 - 当前网络规模固定为两层 2×2，参数可编程，但尚无通用指令集或大容量片上存储。
-- 按键去抖默认按 100 MHz 配置；若官方最终时钟不同，应调整
+- 按键去抖默认按 200 MHz 配置；若官方最终时钟不同，应调整
   `BUTTON_DEBOUNCE_CYCLES`。
 - 当前尚未完成布局布线后 STA、功耗签核、DFT 或硅后验证。
 

@@ -3,7 +3,7 @@ SHELL := /bin/bash
 
 DESIGN ?= XingHuoNpuTile
 CLK_PORT ?= clock
-CLK_FREQ_MHZ ?= 100
+CLK_FREQ_MHZ ?= 200
 VT ?= R
 PYTHON ?= python3
 IVERILOG ?= iverilog

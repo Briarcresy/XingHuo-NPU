@@ -1,3 +1,7 @@
+/* verilator lint_off IMPORTSTAR */
+import TileTypesPkg::*;
+/* verilator lint_on IMPORTSTAR */
+
 // 将有限的LED和两个十六进制数码管组织成多个可翻页的观察窗口。
 module DisplayController (
     input  logic        external_mode,   // 当前实际模式，页面0显示。
@@ -15,8 +19,6 @@ module DisplayController (
     output logic [ 3:0] hex_low,          // 低位十六进制数字，不是段码。
     output logic [ 3:0] hex_high          // 高位十六进制数字，不是段码。
 );
-    import TileTypesPkg::*;
-
     // 本模块是纯组合显示Mux。先给出完整默认值可避免case分支漏赋值而推断Latch；
     // 页面2..9只覆盖LED，因此两个数码管自然保留默认页码显示。
     always_comb begin

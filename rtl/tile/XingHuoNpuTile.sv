@@ -1,8 +1,8 @@
 // XingHuo NPU 的 MPSoC-Digital Tile v1 用户模块。
 // 端口名、方向和位宽与官方接口契约完全一致；最终Tile顶层由官方工具生成。
 module XingHuoNpuTile #(
-    // 默认按100 MHz时钟提供约10 ms机械按键稳定窗口。
-    parameter integer BUTTON_DEBOUNCE_CYCLES = 1000000
+    // 默认按200 MHz时钟提供约10 ms机械按键稳定窗口。
+    parameter integer BUTTON_DEBOUNCE_CYCLES = 2000000
 ) (
     input  logic        clock,            // MPSoC-Digital分配的Tile工作时钟。
     input  logic        reset,            // 平台提供的同步高有效Tile复位。

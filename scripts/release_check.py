@@ -66,13 +66,13 @@ def main():
                       "yosys": capture(["yosys", "-V"]),
                       "iverilog": capture(["iverilog", "-V"]).splitlines()[0]},
         }
-        ppa = ROOT / "build/ppa/XingHuoNpuTile-main-100MHz-RVT"
+        ppa = ROOT / "build/ppa/XingHuoNpuTile-main-200MHz-RVT"
         commands = [
             ("rtl", ["make", "lint", "test"]),
             ("official", ["make", "official-export", f"MPSOC_DIGITAL={args.framework.resolve()}"]),
             ("mapped", ["make", "-C", "ppa", "gls", "ppa", "multi-corner",
                         f"ICS55_PDK={args.pdk.resolve()}", f"IEDA_BIN={args.ieda.resolve()}",
-                        f"BUILD_DIR={ppa}", "VT=R", "CLK_FREQ_MHZ=100"]),
+                        f"BUILD_DIR={ppa}", "VT=R", "CLK_FREQ_MHZ=200"]),
         ]
         try:
             for name, command in commands:

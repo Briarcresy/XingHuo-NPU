@@ -8,11 +8,11 @@
 
 ### `TileTypesPkg`
 
-Tile 层公共 SystemVerilog package。它集中定义 `host_opcode_t`、`display_page_t`、`network_state_t` 和 Shared RAM 地址常量。package 不生成硬件；枚举在综合后仍使用声明的固定位宽，但能提供类型检查并改善代码与波形可读性。
+Tile 层公共 SystemVerilog package。它集中定义 Opcode、显示页面、网络状态和 Shared RAM 地址常量。package 不生成硬件；当前综合工具只允许部分使用点采用枚举类型，因此控制器寄存器保留显式位宽，但所有协议值仍使用集中定义的名称，避免散落裸数字。
 
 ### `XingHuoNpuTile`
 
-MPSoC-Digital 用户设计顶层。它同步外部输入、选择手动或主机控制源、仲裁 Shared RAM，并连接两层网络控制器和显示逻辑。参数 `BUTTON_DEBOUNCE_CYCLES` 设置按钮状态连续稳定多少个周期后才被接受，默认在 100 MHz 下约为 10 ms。
+MPSoC-Digital 用户设计顶层。它同步外部输入、选择手动或主机控制源、仲裁 Shared RAM，并连接两层网络控制器和显示逻辑。参数 `BUTTON_DEBOUNCE_CYCLES` 设置按钮状态连续稳定多少个周期后才被接受，默认在 200 MHz 下约为 10 ms。
 
 | 端口 | 方向/位宽 | 含义与时序 |
 |---|---|---|

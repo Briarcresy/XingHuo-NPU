@@ -35,7 +35,7 @@ RAM 为异步读；写入在 `clock` 上升沿且 `io_ramWen=1` 时发生。
 
 1. 复位期间请求 Toggle 置 0，放弃复位前未完成的事务；复位至少覆盖三个有效时钟沿。
 2. 请求外部模式后，等待 `io_customOut[14]=1`。
-3. 设置 Payload/Opcode 并保持至少 3T，再翻转 Request Toggle。在 100 MHz 下为至少 30 ns。
+3. 设置 Payload/Opcode 并保持至少 3T，再翻转 Request Toggle。在 200 MHz 下为至少 15 ns。
 4. 保持 Payload/Opcode/模式/Toggle，直到观察到 ACK 与请求一致。一次只能有一个未完成请求。
 5. 主机也应同步采样 ACK；读取结果数据时，在观察 ACK 后再留至少一个主机采样周期。
 6. busy 期间可以保持一个待处理请求，空闲后才会执行并应答；超时必须包含剩余网络执行时间。不得在未应答时覆盖请求。

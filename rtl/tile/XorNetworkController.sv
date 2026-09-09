@@ -1,3 +1,7 @@
+/* verilator lint_off IMPORTSTAR */
+import TileTypesPkg::*;
+/* verilator lint_on IMPORTSTAR */
+
 // 自动调度两次NPU Core任务，完成两层XOR分类网络。
 // 可编程模式从外部Shared RAM读取参数；Demo模式使用固定网络常量。
 module XorNetworkController (
@@ -21,11 +25,10 @@ module XorNetworkController (
     output logic [31:0] final_result,      // 第二层四个INT8输出。
     output logic        core_busy_observed // 内部Core忙状态的调试旁路。
 );
-    import TileTypesPkg::*;
-
     // 任务分为四段：准备/第一层、隐藏层写回/第二层、最终写回、结束。
-    // 使用enum而非裸数字编码，便于综合器检查，也让仿真波形直接显示状态名。
-    network_state_t state;          // 当前调度状态。
+    // 状态编码的名称集中定义在package；寄存器显式保留5-bit，兼容当前Yosys
+    // 前端。代码和波形仍使用NET_*名称，不在控制器里散落裸数字。
+    logic [4:0] state;              // 当前调度状态。
     logic [3:0] byte_index;         // 多字节RAM装载/写回的片内索引。
     logic demo_run;                 // 本任务使用常量参数而非RAM参数。
     logic [31:0] activation_matrix; // 当前层2×2 INT8激活，小端打包。

@@ -1,3 +1,7 @@
+/* verilator lint_off IMPORTSTAR */
+import TileTypesPkg::*;
+/* verilator lint_on IMPORTSTAR */
+
 // Manual Mode（手动模式）控制器。
 // DIP给出一个完整字节；经过去抖的按钮脉冲负责写入、寻址、启动和翻页。
 module ManualInputController (
@@ -16,7 +20,6 @@ module ManualInputController (
     output logic       clear_status,        // 单周期状态清除脉冲。
     output logic [3:0] display_page         // 当前显示页，循环范围0..10。
 );
-    import TileTypesPkg::*;
     logic [7:0] address_pointer; // 下一次普通读写所使用并显示的地址。
     logic [7:0] write_address;   // 接受BTN0时锁存的旧地址。
 

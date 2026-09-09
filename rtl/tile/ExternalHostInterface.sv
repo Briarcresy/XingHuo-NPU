@@ -1,3 +1,7 @@
+/* verilator lint_off IMPORTSTAR */
+import TileTypesPkg::*;
+/* verilator lint_on IMPORTSTAR */
+
 // External Host Mode（外部主机模式）命令接口。
 // 主机先稳定payload/opcode/mode，再翻转request，并保持到ack与request相等。
 module ExternalHostInterface (
@@ -18,8 +22,6 @@ module ExternalHostInterface (
     output logic [ 7:0] read_data,             // 最近READ_NEXT锁存的数据。
     output logic        acknowledge_toggle     // 完成事务后回送的应答Toggle。
 );
-    import TileTypesPkg::*;
-
     // Opcode占customIn[11:9]；6和7未定义，但仍正常应答，避免主机死等。
 
     logic [7:0] address_pointer; // 顺序访问指针，读写后自然8-bit回绕。
@@ -29,7 +31,9 @@ module ExternalHostInterface (
 
     wire [7:0] payload = custom_in_sync[7:0];   // 命令数据字段。
     wire request_toggle = custom_in_sync[8];    // 每条新命令翻转一次。
-    wire host_opcode_t opcode = host_opcode_t'(custom_in_sync[11:9]); // 命令类型。
+    // 保持为显式3-bit协议字段；case标签仍由package中的强命名枚举提供。
+    // 这种声明同时兼容Verilator、Icarus和当前PPA流程使用的Yosys前端。
+    wire [2:0] opcode = custom_in_sync[11:9]; // 命令类型。
 
     // 在Tile内部显式采用主流valid-ready命名：valid表示存在未完成请求，ready
     // 表示当前周期能够接收。fire只在两者同时为1时成立。外部CDC仍使用Toggle，
