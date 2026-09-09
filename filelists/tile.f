@@ -16,4 +16,8 @@ rtl/tile/ManualInputController.sv
 rtl/tile/ExternalHostInterface.sv
 rtl/tile/XorNetworkController.sv
 rtl/tile/DisplayController.sv
+rtl/tile/TileModeController.sv
+rtl/tile/TileCommandMux.sv
+rtl/tile/TileRamArbiter.sv
+rtl/tile/TileOutputAdapter.sv
 rtl/tile/XingHuoNpuTile.sv

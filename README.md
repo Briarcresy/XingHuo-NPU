@@ -32,11 +32,12 @@ design.json     MPSoC-Digital 官方工程描述
 最终提交给 MPSoC-Digital 的顶层 `Tile` 由官方导出工具生成。仓库中的用户顶层是 `XingHuoNpuTile`，其端口名称、方向和位宽严格遵循官方契约。Shared RAM 由 SoC 提供，设计只连接其单端口接口，不在 Tile 内重复实例化。
 
 ```text
-按钮/拨码 -> ManualInputController ----+
-                                       +-> RAM仲裁 -> Shared RAM
-customIn -> ExternalHostInterface -----+                 |
-                                                         v
-显示 <- DisplayController <- XorNetworkController -> 2×2 NPU Core
+按钮/拨码 -> ManualInputController --+
+                                     +-> CommandMux -> XorNetworkController <-> 2×2 NPU Core
+customIn -> ExternalHostInterface ---+
+
+Manual / Host / Network RAM端口 -> TileRamArbiter -> Shared RAM
+网络与Core状态 -> DisplayController -> TileOutputAdapter -> 平台显示/状态端口
 ```
 
 ## 两层 XOR 网络
@@ -127,8 +128,8 @@ make release-check
 
 该流程综合完整 `XingHuoNpuTile`。PPA 是前端估算，不等于布局布线后的签核结果，详见 [PPA 说明](ppa/README.md)。
 
-新版ICS55、200 MHz、完整探索性IO预算下的TT估算：6438个标准单元，面积
-13135.08 μm²，Setup WNS 0.021 ns、Hold WNS 0.012 ns。功耗0.2619 W使用默认
+新版ICS55、200 MHz、完整探索性IO预算下的TT估算：6185个标准单元，面积
+13032.32 μm²，Setup WNS 0.115 ns、Hold WNS 0.012 ns。功耗0.2447 W使用默认
 活动率。部分慢角存在setup风险，部分快角存在hold风险，应查看
 `build/ppa/XingHuoNpuTile-main-200MHz-RVT/corners/summary.md`。
 最终状态、缺少的平台输入和交付包说明见[流片准备记录](docs/tapeout-readiness.md)。

@@ -1,109 +1,93 @@
 `timescale 1ns / 1ps
 
-// 用定向激励触发当前Core断言，包括错误状态、单Bank装载和权重驻留计算。
+// 定向验证Core的请求握手、结果背压、错误状态和单Bank权重复用。
 module XingHuo_NPU_sva_tb;
-    logic clk;
-    logic rst;
-    logic start;
-    logic clear_error;
-    logic weight_load;
-    logic [31:0] activation_matrix;
-    logic [31:0] weight_matrix;
+    logic clk, rst;
+    logic start_valid, clear_error, weight_valid, result_ready;
+    logic [31:0] activation_matrix, weight_matrix;
     logic [63:0] bias_vector;
     logic [4:0] quant_shift;
-    wire busy;
-    wire done;
+    wire start_ready, weight_ready, busy, result_valid;
     wire [31:0] result_matrix;
     wire error;
     wire [4:0] error_code;
     wire [15:0] cycle_count;
     wire [31:0] task_count;
-    wire weight_valid;
+    wire weights_loaded;
 
-    // 单一Clock Generator（时钟发生进程），避免声明初始化和always块同时驱动clk。
     initial begin
         clk = 1'b0;
         forever #5 clk = ~clk;
     end
 
     XingHuo_NPU dut (
-        .clk(clk),
-        .rst(rst),
-        .start(start),
+        .clk(clk), .rst(rst),
+        .start_valid(start_valid), .start_ready(start_ready),
         .clear_error(clear_error),
-        .weight_load(weight_load),
-        .activation_matrix(activation_matrix),
-        .weight_matrix(weight_matrix),
-        .bias_vector(bias_vector),
-        .quant_shift(quant_shift),
-        .busy(busy),
-        .done(done),
-        .result_matrix(result_matrix),
-        .error(error),
-        .error_code(error_code),
-        .weight_valid(weight_valid),
-        .cycle_count(cycle_count),
+        .weight_valid(weight_valid), .weight_ready(weight_ready),
+        .activation_matrix(activation_matrix), .weight_matrix(weight_matrix),
+        .bias_vector(bias_vector), .quant_shift(quant_shift),
+        .busy(busy), .result_valid(result_valid), .result_ready(result_ready),
+        .result_matrix(result_matrix), .error(error), .error_code(error_code),
+        .weights_loaded(weights_loaded), .cycle_count(cycle_count),
         .task_count(task_count)
     );
 
     initial begin
-        rst                    = 1'b1;
-        start                  = 1'b0;
-        clear_error            = 1'b0;
-        weight_load            = 1'b0;
-        activation_matrix      = 32'h04030201;
-        weight_matrix          = 32'h08070605;
-        bias_vector            = 64'hfffffffe00000001;
-        quant_shift            = 5'd0;
+        rst = 1'b1;
+        start_valid = 1'b0;
+        clear_error = 1'b0;
+        weight_valid = 1'b0;
+        result_ready = 1'b0;
+        activation_matrix = 32'h04030201;
+        weight_matrix = 32'h08070605;
+        bias_vector = 64'hfffffffe00000001;
+        quant_shift = 5'd0;
 
         repeat (3) @(posedge clk);
-        @(negedge clk);
-        rst = 1'b0;
+        @(negedge clk) rst = 1'b0;
 
-        // 单Bank Weight-resident Mode在空闲时直接装载当前权重。
-        @(negedge clk);
-        weight_load = 1'b1;
-        @(negedge clk);
-        weight_load = 1'b0;
-        if (!weight_valid) $fatal(1, "single-bank weight was not loaded");
+        @(negedge clk) weight_valid = 1'b1;
+        @(negedge clk) weight_valid = 1'b0;
+        if (!weights_loaded) $fatal(1, "single-bank weight was not loaded");
 
-        // 正常启动，然后在busy期间再次给start，验证任务不会重启且错误被记录。
-        @(negedge clk);
-        start = 1'b1;
-        @(negedge clk);
-        start = 1'b0;
+        @(negedge clk) start_valid = 1'b1;
+        @(negedge clk) start_valid = 1'b0;
         wait (busy);
-        @(negedge clk);
-        start = 1'b1;
-        weight_matrix = 32'h00000000;
-        weight_load = 1'b1;
-        @(negedge clk);
-        start = 1'b0;
-        weight_load = 1'b0;
-        wait (done);
-        repeat (2) @(posedge clk);
+        @(negedge clk) begin
+            start_valid = 1'b1;
+        end
+        @(negedge clk) begin
+            start_valid = 1'b0;
+        end
 
-        if (result_matrix !== 32'h302c1414 || !error_code[0] || !error_code[2])
-            $fatal(1, "Core directed SVA stimulus produced wrong state");
+        // 下游故意停三拍；结果与valid必须保持，且Core继续占用。
+        wait (result_valid);
+        repeat (3) begin
+            @(posedge clk); #1ns;
+            if (!result_valid || !busy || result_matrix !== 32'h302c1414)
+                $fatal(1, "result channel did not hold under backpressure");
+        end
+        if (error_code[0])
+            $fatal(1, "legal valid-before-ready request was treated as an error");
 
-        @(negedge clk);
-        clear_error = 1'b1;
-        @(negedge clk);
-        clear_error = 1'b0;
-        @(posedge clk);
-        #1ns;
+        @(negedge clk) result_ready = 1'b1;
+        @(posedge clk); #1ns;
+        if (result_valid || busy) $fatal(1, "result handshake did not release Core");
+
+        @(negedge clk) clear_error = 1'b1;
+        @(negedge clk) clear_error = 1'b0;
+        @(posedge clk); #1ns;
         if (error || error_code != 5'd0)
             $fatal(1, "clear_error did not clear sticky status");
 
-        // busy期间的非法装载没有改变权重；再次运行验证Weight Reuse（权重复用）。
-        @(negedge clk);
-        start = 1'b1;
-        @(negedge clk);
-        start = 1'b0;
-        wait (done);
-        repeat (2) @(posedge clk);
+        // 第二次运行验证驻留权重复用。
+        @(negedge clk) start_valid = 1'b1;
+        @(negedge clk) start_valid = 1'b0;
+        wait (result_valid);
         if (result_matrix !== 32'h302c1414)
             $fatal(1, "resident weight result is incorrect");
+        @(posedge clk); #1ns;
 
         $display("NPU CORE SVA TEST PASS");
         $finish;

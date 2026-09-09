@@ -23,7 +23,7 @@
 | `0x40..0x43` | 4 B | 最终结果，4×INT8 |
 | `0x44` | 1 B | 分类结果，bit 0 有效 |
 | `0x45` | 1 B | 状态：bit0 valid、bit2 error、bit3 demo |
-| `0x46` | 1 B | Core错误码：bit0忙时启动、bit1 Bias溢出、bit2忙时装载权重、bit3未装载权重即启动；bit4保留为0 |
+| `0x46` | 1 B | Core错误码：bit1 Bias溢出、bit3未装载权重即启动；bit0/2/4保留为0 |
 
 RAM 为异步读；写入在 `clock` 上升沿且 `io_ramWen=1` 时发生。
 

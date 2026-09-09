@@ -17,13 +17,13 @@
 
 | RVT库角 | Setup WNS / ns | Hold WNS / ns | 结果 |
 | --- | ---: | ---: | --- |
-| ff_cbest_1p32_125 | 0.238 | -0.018 | Hold未满足 |
-| ff_rcbest_1p08_125 | 0.046 | 0.010 | 满足当前预算 |
-| ff_rcbest_1p32_m40 | 0.288 | -0.030 | Hold未满足 |
-| ss_cworst_1p08_m40 | -1.240 | 0.102 | Setup未满足 |
-| ss_rcworst_1p08_125 | -1.176 | 0.106 | Setup未满足 |
-| ss_rcworst_1p2_m40 | -0.186 | 0.035 | Setup未满足 |
-| typ_tt_1p2_25 | 0.021 | 0.012 | 满足当前预算 |
+| ff_cbest_1p32_125 | 0.304 | -0.018 | Hold未满足 |
+| ff_rcbest_1p08_125 | 0.140 | 0.010 | 满足当前预算 |
+| ff_rcbest_1p32_m40 | 0.351 | -0.030 | Hold未满足 |
+| ss_cworst_1p08_m40 | -0.942 | 0.102 | Setup未满足 |
+| ss_rcworst_1p08_125 | -0.931 | 0.106 | Setup未满足 |
+| ss_rcworst_1p2_m40 | -0.058 | 0.035 | Setup未满足 |
+| typ_tt_1p2_25 | 0.115 | 0.012 | 满足当前预算 |
 
 该表记录本次验证结果；后续RTL、工具或库更新后以`make release-check`生成的包内报告为准。
 

@@ -125,7 +125,7 @@ Opcode：0 设置地址，1 写字节并递增地址，2 读字节并递增地�
 
 ### `XorNetworkController`
 
-顺序调度两次 `XingHuo_NPU` 任务。可编程模式从 Shared RAM 读取输入和两层参数；Demo 模式使用 RTL 常量。完成后写回隐藏层、最终层、分类、状态和错误码。
+顺序调度两次独立 `XingHuo_NPU` 任务。控制器不再包含 Core实例；它通过 `core_*` 命令、数据和响应端口与顶层并列的 Core通信。
 
 | 端口 | 方向/位宽 | 含义与时序 |
 |---|---|---|
@@ -145,7 +145,23 @@ Opcode：0 设置地址，1 写字节并递增地址，2 读字节并递增地�
 | `classification` | 输出 1 bit | 第二层结果字节1大于字节0时为 1，否则为 0。 |
 | `hidden_result` | 输出 32 bit | 第一层四个 INT8 输出，按矩阵约定打包并写至 RAM `0x20～0x23`。 |
 | `final_result` | 输出 32 bit | 第二层四个 INT8 输出，写至 RAM `0x40～0x43`。 |
-| `core_busy_observed` | 输出 1 bit | 内部 NPU Core 的实时 `busy`，供显示和调试。 |
+| `core_start_valid/core_start_ready` | 输出/输入，各1 bit | 任务请求通道；控制器保持valid，直到ready握手。 |
+| `core_weight_valid/core_weight_ready` | 输出/输入，各1 bit | 权重请求通道；控制器保持valid和权重payload，直到ready握手。 |
+| `core_clear_error` | 输出1 bit | 清除独立Core粘滞错误。 |
+| `core_activation_matrix/core_weight_matrix` | 输出，各32 bit | 当前层发给 Core 的激活和权重矩阵。 |
+| `core_bias_vector/core_quant_shift` | 输出64/5 bit | 当前层发给 Core 的偏置和重量化参数。 |
+| `core_busy/core_error` | 输入，各1 bit | 独立 Core 返回的占用和错误状态。 |
+| `core_result_valid/core_result_ready` | 输入/输出，各1 bit | 结果响应通道；控制器在等待状态持续ready并在握手沿锁存结果。 |
+| `core_result/core_error_code` | 输入32/5 bit | 独立 Core 返回的结果和错误码。 |
+
+### Tile结构辅助模块
+
+- `TileModeController`：等待旧事务结束后安全切换手动/主机模式，并产生两侧使能。
+- `TileCommandMux`：根据实际模式选择一组网络启动、Demo输入和清状态命令。
+- `TileRamArbiter`：在网络、主机和手动RAM端口之间执行固定优先级仲裁，并在复位时禁止写。
+- `TileOutputAdapter`：把显示值、主机ACK和网络/Core状态打包到固定Tile输出端口。
+
+这些模块使`XingHuoNpuTile`只保留实例化与连线，不包含行为过程块。
 
 ### `DisplayController`
 
@@ -180,19 +196,22 @@ Opcode：0 设置地址，1 写字节并递增地址，2 读字节并递增地�
 |---|---|---|
 | `clk` | 输入 1 bit | Core 工作时钟。 |
 | `rst` | 输入 1 bit | 同步高有效复位。 |
-| `start` | 输入 1 bit | 启动 valid；内部 ready 条件为 `!busy && weight_valid`，二者同时成立的上升沿接受。建议使用单周期脉冲。 |
+| `start_valid` | 输入 1 bit | 任务请求有效；在握手前必须保持为1，payload同时保持稳定。 |
+| `start_ready` | 输出 1 bit | Core可接收任务；条件为当前空闲、没有待消费结果且权重已装载。`start_valid && start_ready` 的上升沿接受任务。 |
 | `clear_error` | 输入 1 bit | 清除粘滞错误，不影响当前任务、结果和性能计数。 |
-| `weight_load` | 输入 1 bit | 权重装载 valid；内部 ready 条件为 `!busy`，二者同时成立的上升沿把完整 `weight_matrix` 装入四个 PE。 |
+| `weight_valid` | 输入 1 bit | 权重请求有效；在握手前保持为1，并保持 `weight_matrix` 稳定。 |
+| `weight_ready` | 输出 1 bit | Core可更新权重；`weight_valid && weight_ready` 的上升沿把完整矩阵装入四个 PE。 |
 | `activation_matrix` | 输入 32 bit | 2×2 INT8 激活矩阵，按通用矩阵约定打包；任务执行期间保持稳定。 |
-| `weight_matrix` | 输入 32 bit | 2×2 INT8 权重矩阵，在有效 `weight_load` 上升沿采样。 |
+| `weight_matrix` | 输入 32 bit | 2×2 INT8 权重矩阵，在权重通道握手沿采样。 |
 | `bias_vector` | 输入 64 bit | `[31:0]=bias0`、`[63:32]=bias1`，分别按输出列广播；任务完成写结果时使用。 |
 | `quant_shift` | 输入 5 bit | 四路共用的算术右移量0～31；任务完成写结果时使用。 |
-| `busy` | 输出 1 bit | 从接受启动到结果写回期间为 1。 |
-| `done` | 输出 1 bit | 结果写回完成时产生一个周期脉冲。 |
-| `result_matrix` | 输出 32 bit | 四个 ReLU 后 INT8 结果，按通用矩阵约定打包；保持到下一次结果写回。 |
+| `busy` | 输出 1 bit | 从接受启动到结果被下游消费期间为1。 |
+| `result_valid` | 输出 1 bit | `result_matrix` 有效；下游未就绪时持续保持。 |
+| `result_ready` | 输入 1 bit | 下游接收能力；`result_valid && result_ready` 的上升沿消费结果。 |
+| `result_matrix` | 输出 32 bit | 四个 ReLU 后 INT8 结果；`result_valid && !result_ready` 时保持稳定。 |
 | `error` | 输出 1 bit | `error_code` 任一有效位为1时保持为1。 |
-| `error_code` | 输出 5 bit | 粘滞错误：bit0忙时启动，bit1 Bias溢出，bit2忙时装权重，bit3无权重启动，bit4保留0。 |
-| `weight_valid` | 输出 1 bit | 复位后为0，首次成功装载权重后保持为1。 |
+| `error_code` | 输出 5 bit | 粘滞错误：bit1 Bias溢出，bit3无权重启动；bit0/2/4保留0。valid可以先于ready拉高，因此等待ready不属于错误。 |
+| `weights_loaded` | 输出 1 bit | 复位后为0，首次成功装载权重后保持为1。 |
 | `cycle_count` | 输出 16 bit | 最近成功任务从接受启动到完成的 Core 工作周期数。 |
 | `task_count` | 输出 32 bit | 复位以来成功完成任务数量，自然回绕。 |
 
@@ -331,5 +350,5 @@ Core 控制状态机：`IDLE -> CLEAR -> RUN(phase 0..3) -> COLLECT -> WRITE_RES
 - `io_ramRdata` 是 Shared RAM 的异步读数据，必须与当前地址作为同一 RAM 事务理解，不能单独加两级同步器。
 - 手动和主机模块产生的启动、清除与写请求都是单周期脉冲；顶层在模式交接前等待已接受脉冲被消费。
 - `XorNetworkController.busy=1` 时独占 RAM；空闲时 RAM 交给当前手动或外部模式。
-- Core 的 `done` 是单周期脉冲，Tile 网络的 `done` 是供人机和软件观察的粘滞状态。
+- Core 的结果使用ready-valid握手，Tile 网络的 `done` 是供人机和软件观察的粘滞状态。
 - 多位异步输入经过两级同步仍不天然具备原子性；DIP 使用稳定窗口，主机总线使用 Request/ACK Toggle 协议。

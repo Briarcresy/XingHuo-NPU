@@ -23,7 +23,21 @@ module XorNetworkController (
     output logic        classification,    // 最终二分类结果。
     output logic [31:0] hidden_result,     // 第一层四个INT8输出。
     output logic [31:0] final_result,      // 第二层四个INT8输出。
-    output logic        core_busy_observed // 内部Core忙状态的调试旁路。
+    output logic        core_start_valid,  // Core任务请求，等待ready期间保持。
+    input  logic        core_start_ready,
+    output logic        core_clear_error,  // 清除独立Core的粘滞错误。
+    output logic        core_weight_valid, // 权重请求，等待ready期间保持。
+    input  logic        core_weight_ready,
+    output logic [31:0] core_activation_matrix,
+    output logic [31:0] core_weight_matrix,
+    output logic [63:0] core_bias_vector,
+    output logic [ 4:0] core_quant_shift,
+    input  logic        core_busy,
+    input  logic        core_result_valid,
+    output logic        core_result_ready,
+    input  logic [31:0] core_result,
+    input  logic        core_error,
+    input  logic [ 4:0] core_error_code
 );
     // 任务分为四段：准备/第一层、隐藏层写回/第二层、最终写回、结束。
     // 状态编码的名称集中定义在package；寄存器显式保留5-bit，兼容当前Yosys
@@ -36,21 +50,12 @@ module XorNetworkController (
     logic [63:0] bias_vector;       // 当前层两个INT32 Bias，小端打包。
     logic [4:0] quant_shift;        // 当前层统一重量化右移量。
 
-    logic core_start;
-    logic core_clear_error;
-    logic core_weight_load;
-    wire core_busy;
-    wire core_done;
-    wire [31:0] core_result;
-    wire core_error;
-    wire [4:0] core_error_code;
-    wire weight_valid;
-    wire [15:0] cycle_count;
-    wire [31:0] task_count;
-
     // busy也作为顶层RAM仲裁选择信号：离开IDLE后，本模块立即独占RAM。
     assign busy = (state != NET_IDLE);
-    assign core_busy_observed = core_busy;
+    assign core_activation_matrix = activation_matrix;
+    assign core_weight_matrix     = weight_matrix;
+    assign core_bias_vector       = bias_vector;
+    assign core_quant_shift       = quant_shift;
 
     // RAM地址和写数据完全由状态译码；busy期间本控制器独占RAM端口。
     // RAM为异步读，因此状态/索引改变后数据在下一个采样沿之前已经跟随新地址。
@@ -97,13 +102,14 @@ module XorNetworkController (
         endcase
     end
 
-    // Core控制信号为单状态脉冲，避免跨层或跨任务重复触发。WLOAD先把完整
-    // 32-bit权重矩阵装入四个PE，下一状态才发START，满足单Bank权重接口时序。
+    // 每个请求状态保持valid，直到Core的ready在上升沿完成握手。WLOAD先把
+    // 完整32-bit权重矩阵装入四个PE，下一状态才发START。
     always_comb begin
-        core_start         = (state == NET_CORE_START1) || (state == NET_CORE_START2);
+        core_start_valid   = (state == NET_CORE_START1) || (state == NET_CORE_START2);
         core_clear_error   = (state == NET_CORE_CLEAR)
                            || ((state == NET_IDLE) && clear_status);
-        core_weight_load   = (state == NET_CORE_WLOAD1) || (state == NET_CORE_WLOAD2);
+        core_weight_valid  = (state == NET_CORE_WLOAD1) || (state == NET_CORE_WLOAD2);
+        core_result_ready  = (state == NET_CORE_WAIT1) || (state == NET_CORE_WAIT2);
     end
 
     always_ff @(posedge clock) begin
@@ -188,11 +194,13 @@ module XorNetworkController (
                     quant_shift <= ram_read_data[4:0];
                     state <= NET_CORE_WLOAD1;
                 end
-                NET_CORE_WLOAD1:   state <= NET_CORE_START1;
-                NET_CORE_START1:   state <= NET_CORE_WAIT1;
+                NET_CORE_WLOAD1:
+                    if (core_weight_ready) state <= NET_CORE_START1;
+                NET_CORE_START1:
+                    if (core_start_ready) state <= NET_CORE_WAIT1;
                 NET_CORE_WAIT1: begin
-                    // 等待Core单周期done；在该拍锁存结果，下一状态逐字节写RAM。
-                    if (core_done) begin
+                    // ready持续为1；valid到达的握手沿锁存结果，随后逐字节写RAM。
+                    if (core_result_valid) begin
                         hidden_result <= core_result;
                         error <= error | core_error;
                         byte_index <= 4'd0;
@@ -237,11 +245,13 @@ module XorNetworkController (
                     quant_shift <= ram_read_data[4:0];
                     state <= NET_CORE_WLOAD2;
                 end
-                NET_CORE_WLOAD2:   state <= NET_CORE_START2;
-                NET_CORE_START2:   state <= NET_CORE_WAIT2;
+                NET_CORE_WLOAD2:
+                    if (core_weight_ready) state <= NET_CORE_START2;
+                NET_CORE_START2:
+                    if (core_start_ready) state <= NET_CORE_WAIT2;
                 NET_CORE_WAIT2: begin
                     // 锁存最终矩阵，并用结果字节1与字节0的大小关系产生类别。
-                    if (core_done) begin
+                    if (core_result_valid) begin
                         final_result <= core_result;
                         classification <= (core_result[15:8] > core_result[7:0]);
                         error <= error | core_error;
@@ -275,24 +285,4 @@ module XorNetworkController (
         end
     end
 
-    // 同一个Core先后执行两层；每层都先覆盖单Bank权重再启动。
-    XingHuo_NPU npu_core (
-        .clk(clock),
-        .rst(reset),
-        .start(core_start),
-        .clear_error(core_clear_error),
-        .weight_load(core_weight_load),
-        .activation_matrix(activation_matrix),
-        .weight_matrix(weight_matrix),
-        .bias_vector(bias_vector),
-        .quant_shift(quant_shift),
-        .busy(core_busy),
-        .done(core_done),
-        .result_matrix(core_result),
-        .error(core_error),
-        .error_code(core_error_code),
-        .weight_valid(weight_valid),
-        .cycle_count(cycle_count),
-        .task_count(task_count)
-    );
 endmodule

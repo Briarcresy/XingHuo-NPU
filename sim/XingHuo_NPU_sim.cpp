@@ -44,8 +44,6 @@ const char* terminal_reset(int file_descriptor)
 constexpr int kMaximumWaitCycles = 32;
 constexpr int kMaximumReportedFailures = 10;
 constexpr std::uint16_t kExpectedCoreCycles = 7;
-constexpr std::uint8_t kErrorStartWhileBusy = 1U << 0;
-constexpr std::uint8_t kErrorLoadWhileBusy = 1U << 2;
 constexpr std::uint8_t kErrorStartWithoutWeight = 1U << 3;
 
 struct TestVector {
@@ -251,21 +249,21 @@ public:
         dut_.bias_vector = 0;
         dut_.quant_shift = 0;
 
-        dut_.start = 1;
+        dut_.start_valid = 1;
         tick(); // IDLE接受任务。
         tick(); // busy期间再次观察到start，应置位协议错误。
-        dut_.start = 0;
+        dut_.start_valid = 0;
 
         for (int cycle = 0; cycle < kMaximumWaitCycles; ++cycle) {
             tick();
-            if (dut_.done) {
+            if (dut_.result_valid) {
                 tick(); // 让可观测性计数器锁存done事件。
                 break;
             }
         }
 
-        if (!dut_.error || !(dut_.error_code & kErrorStartWhileBusy)) {
-            std::cerr << "FAIL observability: start-while-busy was not reported\n";
+        if (dut_.error || dut_.error_code != 0) {
+            std::cerr << "FAIL ready-valid: valid held while not ready was treated as an error\n";
             return false;
         }
 
@@ -286,9 +284,9 @@ public:
 
         reset();
         // 当前权重尚未装载时，start必须被拒绝并留下可诊断错误。
-        dut_.start = 1;
+        dut_.start_valid = 1;
         tick();
-        dut_.start = 0;
+        dut_.start_valid = 0;
         if (dut_.busy || !(dut_.error_code & kErrorStartWithoutWeight)) {
             std::cerr << "FAIL resident: start without active weight was not rejected\n";
             return false;
@@ -296,7 +294,7 @@ public:
         clear_errors();
 
         load_weight(reuse_a.weight);
-        if (!dut_.weight_valid) {
+        if (!dut_.weights_loaded) {
             std::cerr << "FAIL resident: single-bank load validity is incorrect\n";
             return false;
         }
@@ -310,17 +308,11 @@ public:
         // busy期间的装载必须被拒绝，且不能扰动当前任务使用的权重。
         load_inputs(active_old);
         clear_errors();
-        dut_.start = 1;
+        dut_.start_valid = 1;
         tick();
-        dut_.start = 0;
+        dut_.start_valid = 0;
         dut_.weight_matrix = active_new.weight;
-        dut_.weight_load = 1;
         tick();
-        dut_.weight_load = 0;
-        if (!(dut_.error_code & kErrorLoadWhileBusy)) {
-            std::cerr << "FAIL resident: load while busy was not reported\n";
-            return false;
-        }
         if (!wait_for_done() || dut_.result_matrix != active_old.expected) {
             std::cerr << "FAIL resident: rejected load disturbed active computation\n";
             return false;
@@ -344,9 +336,10 @@ private:
     {
         dut_.clk = 0;
         dut_.rst = 0;
-        dut_.start = 0;
+        dut_.start_valid = 0;
         dut_.clear_error = 0;
-        dut_.weight_load = 0;
+        dut_.weight_valid = 0;
+        dut_.result_ready = 1;
         dut_.activation_matrix = 0;
         dut_.weight_matrix = 0;
         dut_.bias_vector = 0;
@@ -384,13 +377,13 @@ private:
     bool start_and_wait()
     {
         clear_errors();
-        dut_.start = 1;
+        dut_.start_valid = 1;
         tick();
-        dut_.start = 0;
+        dut_.start_valid = 0;
 
         for (int cycle = 0; cycle < kMaximumWaitCycles; ++cycle) {
             tick();
-            if (dut_.done) {
+            if (dut_.result_valid) {
                 // done由ControlUnit产生；顶层计数器在下一上升沿观察并锁存它。
                 tick();
                 return true;
@@ -403,7 +396,7 @@ private:
     {
         for (int cycle = 0; cycle < kMaximumWaitCycles; ++cycle) {
             tick();
-            if (dut_.done) {
+            if (dut_.result_valid) {
                 tick();
                 return true;
             }
@@ -414,9 +407,15 @@ private:
     void load_weight(std::uint32_t weight)
     {
         dut_.weight_matrix = weight;
-        dut_.weight_load = 1;
-        tick();
-        dut_.weight_load = 0;
+        dut_.weight_valid = 1;
+        for (int cycle = 0; !dut_.weight_ready; ++cycle) {
+            if (cycle == kMaximumWaitCycles) {
+                throw std::runtime_error("等待Core接收权重超时");
+            }
+            tick();
+        }
+        tick(); // valid && ready的上升沿完成权重请求。
+        dut_.weight_valid = 0;
     }
 
     static const TestVector& find_vector(const VectorSet& vector_set, const std::string& name)

@@ -28,7 +28,7 @@ name activation_hex weight_hex bias_hex shift expected_hex error_hex
 Core已移除Direct Mode。批量Testbench对每一个向量都执行：
 
 ```text
-weight_load → start → wait(done) → compare
+weight_valid/weight_ready → start_valid/start_ready → result_valid/result_ready → compare
 ```
 
 生成10个随机用例进行快速调试：

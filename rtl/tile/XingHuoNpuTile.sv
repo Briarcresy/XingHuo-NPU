@@ -29,7 +29,9 @@ module XingHuoNpuTile #(
     logic [15:0] custom_in_sync;
 
     logic external_mode_request; // 主机同步后的期望模式。
-    logic external_mode;         // 顶层已安全完成交接的实际模式。
+    logic external_mode;         // 已安全完成交接的实际模式。
+    logic manual_enable;
+    logic host_enable;
 
     logic [7:0] manual_ram_address;
     logic manual_ram_write_request;
@@ -64,30 +66,27 @@ module XingHuoNpuTile #(
     logic [31:0] hidden_result;
     logic [31:0] final_result;
     logic core_busy;
+    logic core_start_valid;
+    logic core_start_ready;
+    logic core_clear_error;
+    logic core_weight_valid;
+    logic core_weight_ready;
+    logic [31:0] core_activation_matrix;
+    logic [31:0] core_weight_matrix;
+    logic [63:0] core_bias_vector;
+    logic [4:0] core_quant_shift;
+    logic core_result_valid;
+    logic core_result_ready;
+    logic [31:0] core_result;
+    logic core_error;
+    logic [4:0] core_error_code;
+    logic core_weights_loaded;
+    logic [15:0] core_cycle_count;
+    logic [31:0] core_task_count;
 
     logic [7:0] led_value;
     logic [3:0] hex_low;
     logic [3:0] hex_high;
-
-    // 组合条件先命名再使用，波形和代码审查中都能直接看到“是否可交接”以及
-    // “哪个主设备获得RAM”这两个设计意图。这是总线仲裁器常见的grant写法。
-    logic mode_handoff_ready;
-    logic controller_ram_grant;
-    logic host_ram_grant;
-
-    always_comb begin
-        mode_handoff_ready = !network_busy
-                           && !manual_ram_write_request
-                           && !host_ram_write_request
-                           && !manual_start_programmable
-                           && !manual_start_demo
-                           && !host_start_programmable
-                           && !host_start_demo
-                           && !manual_clear_status
-                           && !host_clear_status;
-        controller_ram_grant = network_busy;
-        host_ram_grant       = !controller_ram_grant && external_mode;
-    end
 
     // CDC边界：后续模块只能看到buttons_sync/dip_sync/custom_in_sync。
     TileInputSynchronizer input_synchronizer (
@@ -116,7 +115,7 @@ module XingHuoNpuTile #(
     ManualInputController manual_controller (
         .clock(clock),
         .reset(reset),
-        .enable(!external_mode && !external_mode_request),
+        .enable(manual_enable),
         .network_busy(network_busy),
         .dip_value(dip_sync),
         .button_pressed(button_pressed),
@@ -134,7 +133,7 @@ module XingHuoNpuTile #(
     ExternalHostInterface host_interface (
         .clock(clock),
         .reset(reset),
-        .enable(external_mode && external_mode_request),
+        .enable(host_enable),
         .network_busy(network_busy),
         .custom_in_sync(custom_in_sync),
         .ram_read_data(io_ramRdata),
@@ -150,30 +149,41 @@ module XingHuoNpuTile #(
         .acknowledge_toggle(host_acknowledge_toggle)
     );
 
-    // 模式不匹配时停止接收旧模式的新命令，已接受的脉冲先消费再交接。
-    // 不能只等busy：启动脉冲与network_busy之间存在一个交接周期。
-    always_ff @(posedge clock) begin
-        if (reset) external_mode <= 1'b0;
-        else if (mode_handoff_ready)
-            external_mode <= external_mode_request;
-    end
+    TileModeController mode_controller (
+        .clock(clock),
+        .reset(reset),
+        .external_mode_request(external_mode_request),
+        .network_busy(network_busy),
+        .manual_ram_write_request(manual_ram_write_request),
+        .host_ram_write_request(host_ram_write_request),
+        .manual_start_programmable(manual_start_programmable),
+        .manual_start_demo(manual_start_demo),
+        .host_start_programmable(host_start_programmable),
+        .host_start_demo(host_start_demo),
+        .manual_clear_status(manual_clear_status),
+        .host_clear_status(host_clear_status),
+        .external_mode(external_mode),
+        .manual_enable(manual_enable),
+        .host_enable(host_enable)
+    );
 
-    // 只把实际选中模式产生的控制事件送给两层网络控制器。
-    always_comb begin
-        if (external_mode) begin
-            controller_start_programmable = host_start_programmable;
-            controller_start_demo = host_start_demo;
-            controller_demo_input = host_demo_input;
-            controller_clear_status = host_clear_status;
-        end else begin
-            controller_start_programmable = manual_start_programmable;
-            controller_start_demo = manual_start_demo;
-            controller_demo_input = manual_demo_input;
-            controller_clear_status = manual_clear_status;
-        end
-    end
+    TileCommandMux command_mux (
+        .external_mode(external_mode),
+        .manual_start_programmable(manual_start_programmable),
+        .manual_start_demo(manual_start_demo),
+        .manual_demo_input(manual_demo_input),
+        .manual_clear_status(manual_clear_status),
+        .host_start_programmable(host_start_programmable),
+        .host_start_demo(host_start_demo),
+        .host_demo_input(host_demo_input),
+        .host_clear_status(host_clear_status),
+        .controller_start_programmable(controller_start_programmable),
+        .controller_start_demo(controller_start_demo),
+        .controller_demo_input(controller_demo_input),
+        .controller_clear_status(controller_clear_status)
+    );
 
-    // 两层任务调度器内部复用同一个2×2 NPU Core，并在运行时取得RAM独占权。
+    // 网络控制器和计算Core是并列模块：控制器调度两层，Core只执行单层矩阵任务。
     XorNetworkController xor_controller (
         .clock(clock),
         .reset(reset),
@@ -191,28 +201,63 @@ module XingHuoNpuTile #(
         .classification(classification),
         .hidden_result(hidden_result),
         .final_result(final_result),
-        .core_busy_observed(core_busy)
+        .core_start_valid(core_start_valid),
+        .core_start_ready(core_start_ready),
+        .core_clear_error(core_clear_error),
+        .core_weight_valid(core_weight_valid),
+        .core_weight_ready(core_weight_ready),
+        .core_activation_matrix(core_activation_matrix),
+        .core_weight_matrix(core_weight_matrix),
+        .core_bias_vector(core_bias_vector),
+        .core_quant_shift(core_quant_shift),
+        .core_busy(core_busy),
+        .core_result_valid(core_result_valid),
+        .core_result_ready(core_result_ready),
+        .core_result(core_result),
+        .core_error(core_error),
+        .core_error_code(core_error_code)
     );
 
-    // Shared RAM端口仲裁：网络运行时控制器独占；空闲时交给所选输入模式。
-    // 优先级为网络 > 外部主机/手动。三个来源都使用同一地址、写使能和数据口。
-    always_comb begin
-        if (controller_ram_grant) begin
-            io_ramAddr  = controller_ram_address;
-            io_ramWen   = controller_ram_write_enable;
-            io_ramWdata = controller_ram_write_data;
-        end else if (host_ram_grant) begin
-            io_ramAddr  = host_ram_address;
-            io_ramWen   = host_ram_write_request;
-            io_ramWdata = host_ram_write_data;
-        end else begin
-            io_ramAddr  = manual_ram_address;
-            io_ramWen   = manual_ram_write_request;
-            io_ramWdata = manual_ram_write_data;
-        end
-        // Shared RAM不一定由Tile reset复位；禁止复位采样沿遗留一次写入。
-        if (reset) io_ramWen = 1'b0;
-    end
+    XingHuo_NPU npu_core (
+        .clk(clock),
+        .rst(reset),
+        .start_valid(core_start_valid),
+        .start_ready(core_start_ready),
+        .clear_error(core_clear_error),
+        .weight_valid(core_weight_valid),
+        .weight_ready(core_weight_ready),
+        .activation_matrix(core_activation_matrix),
+        .weight_matrix(core_weight_matrix),
+        .bias_vector(core_bias_vector),
+        .quant_shift(core_quant_shift),
+        .busy(core_busy),
+        .result_valid(core_result_valid),
+        .result_ready(core_result_ready),
+        .result_matrix(core_result),
+        .error(core_error),
+        .error_code(core_error_code),
+        .weights_loaded(core_weights_loaded),
+        .cycle_count(core_cycle_count),
+        .task_count(core_task_count)
+    );
+
+    TileRamArbiter ram_arbiter (
+        .reset(reset),
+        .network_busy(network_busy),
+        .external_mode(external_mode),
+        .controller_address(controller_ram_address),
+        .controller_write_enable(controller_ram_write_enable),
+        .controller_write_data(controller_ram_write_data),
+        .host_address(host_ram_address),
+        .host_write_request(host_ram_write_request),
+        .host_write_data(host_ram_write_data),
+        .manual_address(manual_ram_address),
+        .manual_write_request(manual_ram_write_request),
+        .manual_write_data(manual_ram_write_data),
+        .ram_address(io_ramAddr),
+        .ram_write_enable(io_ramWen),
+        .ram_write_data(io_ramWdata)
+    );
 
     // 显示逻辑只旁路观察内部状态，不参与任务控制或计算数据路径。
     DisplayController display_controller (
@@ -232,23 +277,23 @@ module XingHuoNpuTile #(
         .hex_high(hex_high)
     );
 
-    // Harness仅在Update为1时锁存显示值；持续置1表示每拍都反映最新状态。
-    // customOut位定义：7:0读数据，8 ACK，9网络忙，10完成，11 Core忙，
-    // 12错误，13分类，14实际外部模式，15协议版本1。
-    always_comb begin
-        io_led             = led_value;
-        io_ledUpdate       = 1'b1;
-        io_hex7seg_0       = hex_low;
-        io_hex7seg_1       = hex_high;
-        io_hex7segUpdate   = 1'b1;
-        io_customOut[7:0]  = host_read_data;
-        io_customOut[8]    = host_acknowledge_toggle;
-        io_customOut[9]    = network_busy;
-        io_customOut[10]   = network_done;
-        io_customOut[11]   = core_busy;
-        io_customOut[12]   = network_error;
-        io_customOut[13]   = classification;
-        io_customOut[14]   = external_mode;
-        io_customOut[15]   = 1'b1; // 外部命令协议版本1。
-    end
+    TileOutputAdapter output_adapter (
+        .led_value(led_value),
+        .hex_low(hex_low),
+        .hex_high(hex_high),
+        .host_read_data(host_read_data),
+        .host_acknowledge_toggle(host_acknowledge_toggle),
+        .network_busy(network_busy),
+        .network_done(network_done),
+        .core_busy(core_busy),
+        .network_error(network_error),
+        .classification(classification),
+        .external_mode(external_mode),
+        .io_led(io_led),
+        .io_ledUpdate(io_ledUpdate),
+        .io_hex7seg_0(io_hex7seg_0),
+        .io_hex7seg_1(io_hex7seg_1),
+        .io_hex7segUpdate(io_hex7segUpdate),
+        .io_customOut(io_customOut)
+    );
 endmodule
