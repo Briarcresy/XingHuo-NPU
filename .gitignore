@@ -2,6 +2,7 @@
 /yosys-sta
 /build/
 /mpsoc-digital/
+/backend/
 
 # Python缓存
 __pycache__/
