@@ -1,8 +1,8 @@
 // 将已经同步的机械按键转换成去抖后的单周期按下脉冲。
 // 八个按键共用稳定计数器：任一位变化都会重新开始稳定时间计数。
 module ButtonConditioner #(
-    // 新状态必须连续保持的周期数；200 MHz下2,000,000周期约为10 ms。
-    parameter integer DEBOUNCE_CYCLES = 2000000
+    // 新状态必须连续保持的周期数；150 MHz下1,500,000周期约为10 ms。
+    parameter integer DEBOUNCE_CYCLES = 1500000
 ) (
     input  logic       clock,          // 去抖逻辑工作时钟。
     input  logic       reset,          // 同步高有效复位。

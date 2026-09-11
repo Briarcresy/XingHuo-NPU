@@ -66,7 +66,7 @@ def main():
                       "yosys": capture(["yosys", "-V"]),
                       "iverilog": capture(["iverilog", "-V"]).splitlines()[0]},
         }
-        ppa = ROOT / "build/ppa/XingHuoNpuTile-main-200MHz-RVT"
+        ppa = ROOT / "build/ppa/XingHuoNpuTile-main-150MHz-RVT"
         commands = [
             ("rtl", ["make", "lint", "test"]),
             ("official", ["make", "official-export", f"MPSOC_DIGITAL={args.framework.resolve()}"]),

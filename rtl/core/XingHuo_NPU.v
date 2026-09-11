@@ -37,17 +37,16 @@ module XingHuo_NPU (
     output [4:0] error_code,
     output       weights_loaded,
     // 最近一个成功任务从接受start到产生结果所经历的Core工作周期数。
-    output reg [15:0] cycle_count,
+    output [15:0] cycle_count,
     // 复位以来成功完成的任务总数；自然按32位回绕。
-    output reg [31:0] task_count
+    output [31:0] task_count
 );
     // 控制通路信号。
     wire        [ 1:0] phase;
     wire               array_clear;
     wire               array_step;
     wire               result_write_enable;
-    wire               control_busy;
-    wire               control_done;
+    wire               weight_load;
 
     wire signed [7:0] activation_top_col0;
     wire signed [7:0] activation_top_col1;
@@ -65,38 +64,28 @@ module XingHuo_NPU (
     wire signed [31:0] sum11;
     wire               bias_overflow;
 
-    reg bias_overflow_error;
-    reg start_without_weight_error;
-    reg [15:0] current_cycle_count;
-    reg weight_valid_reg;
-    reg result_valid_reg;
-
-    // 将命令入口写成常见的valid-ready-fire形式。调用者给出valid；Core根据
-    // 当前状态给出ready；只有fire成立的上升沿才真正修改体系状态。
-    wire start_fire;
-    wire weight_fire;
-
-    assign busy              = control_busy || result_valid_reg;
-    assign start_ready       = !busy && weight_valid_reg;
-    assign start_fire        = start_valid && start_ready;
-    assign weight_ready      = !busy;
-    assign weight_fire       = weight_valid && weight_ready;
-    assign result_valid      = result_valid_reg;
-    assign weights_loaded    = weight_valid_reg;
-    assign error_code = {1'b0, start_without_weight_error,
-                         1'b0, bias_overflow_error, 1'b0};
-    assign error      = |error_code;
-
-    ControlUnit control_unit (
+    CoreController core_controller (
         .clk(clk),
         .rst(rst),
-        .start(start_fire),
-        .busy(control_busy),
-        .done(control_done),
+        .start_valid(start_valid),
+        .start_ready(start_ready),
+        .clear_error(clear_error),
+        .weight_valid(weight_valid),
+        .weight_ready(weight_ready),
+        .weight_load(weight_load),
+        .busy(busy),
+        .result_valid(result_valid),
+        .result_ready(result_ready),
+        .bias_overflow(bias_overflow),
         .phase(phase),
         .array_clear(array_clear),
         .array_step(array_step),
-        .result_write_enable(result_write_enable)
+        .result_write_enable(result_write_enable),
+        .error(error),
+        .error_code(error_code),
+        .weights_loaded(weights_loaded),
+        .cycle_count(cycle_count),
+        .task_count(task_count)
     );
 
     MatrixFeeder matrix_feeder (
@@ -113,7 +102,7 @@ module XingHuo_NPU (
         .rst(rst),
         .clear(array_clear),
         .step(array_step),
-        .weight_load(weight_fire),
+        .weight_load(weight_load),
         .weight_matrix(weight_matrix),
         .activation_top_col0(activation_top_col0),
         .activation_top_col1(activation_top_col1),
@@ -153,57 +142,4 @@ module XingHuo_NPU (
         .bias_overflow(bias_overflow)
     );
 
-    // 每类Sticky Error使用独立寄存器块：事件置位，clear_error或复位清零。
-    // 分开后每个块只有一个置位原因，便于审查优先级和在波形中定位来源。
-    always @(posedge clk) begin
-        if (rst) bias_overflow_error <= 1'b0;
-        else if (result_write_enable && bias_overflow) bias_overflow_error <= 1'b1;
-        else if (clear_error) bias_overflow_error <= 1'b0;
-    end
-
-    always @(posedge clk) begin
-        if (rst) start_without_weight_error <= 1'b0;
-        else if (start_valid && !busy && !weight_valid_reg)
-            start_without_weight_error <= 1'b1;
-        else if (clear_error) start_without_weight_error <= 1'b0;
-    end
-
-    // 单Bank有效位：复位后必须先在空闲状态装载一次完整权重矩阵。
-    always @(posedge clk) begin
-        if (rst) begin
-            weight_valid_reg <= 1'b0;
-        end else begin
-            if (weight_fire) weight_valid_reg <= 1'b1;
-        end
-    end
-
-    // 结果产生后保持valid，直到下游以ready完成握手；等待期间禁止覆盖结果。
-    always @(posedge clk) begin
-        if (rst) result_valid_reg <= 1'b0;
-        else if (result_write_enable) result_valid_reg <= 1'b1;
-        else if (result_valid_reg && result_ready) result_valid_reg <= 1'b0;
-    end
-
-    // 当前任务周期计数器只负责运行中的饱和计数。
-    always @(posedge clk) begin
-        if (rst) begin
-            current_cycle_count <= 16'd0;
-        end else begin
-            if (start_fire) current_cycle_count <= 16'd0;
-            else if (busy && current_cycle_count != 16'hffff)
-                current_cycle_count <= current_cycle_count + 1'b1;
-        end
-    end
-
-    // 最近一次延迟只在任务完成事件上锁存。
-    always @(posedge clk) begin
-        if (rst) cycle_count <= 16'd0;
-        else if (control_done) cycle_count <= current_cycle_count;
-    end
-
-    // 完成任务总数是独立事件计数器，按32位自然回绕。
-    always @(posedge clk) begin
-        if (rst) task_count <= 32'd0;
-        else if (control_done) task_count <= task_count + 1'b1;
-    end
 endmodule

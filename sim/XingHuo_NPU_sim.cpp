@@ -384,7 +384,7 @@ private:
         for (int cycle = 0; cycle < kMaximumWaitCycles; ++cycle) {
             tick();
             if (dut_.result_valid) {
-                // done由ControlUnit产生；顶层计数器在下一上升沿观察并锁存它。
+                // done由ComputeSequencer产生；顶层计数器在下一上升沿观察并锁存它。
                 tick();
                 return true;
             }

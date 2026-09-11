@@ -7,7 +7,7 @@
 | 图源 | 用途 | 对应 RTL |
 | :-- | :-- | :-- |
 | [tile-overview.drawio](tile-overview.drawio) | Tile 内外边界、控制、计算与 RAM 通路 | [XingHuoNpuTile.sv](../../rtl/tile/XingHuoNpuTile.sv) 及 `rtl/tile/` 子模块 |
-| [core-architecture.drawio](core-architecture.drawio) | Core 主数据通路与任务控制 | [XingHuo_NPU.v](../../rtl/core/XingHuo_NPU.v)、ControlUnit、MatrixFeeder、ResultCollector |
+| [core-architecture.drawio](core-architecture.drawio) | Core 主数据通路与任务控制 | [XingHuo_NPU.v](../../rtl/core/XingHuo_NPU.v)、CoreController、ComputeSequencer、MatrixFeeder、ResultCollector |
 | [systolic-array.drawio](systolic-array.drawio) | 2×2 PE 排列、权重映射与传播方向 | [SystolicArray.v](../../rtl/core/SystolicArray.v)、[MatrixFeeder.v](../../rtl/core/MatrixFeeder.v) |
 | [mac-pe.drawio](mac-pe.drawio) | 组合 MAC 与驻留权重、流水寄存器边界 | [MacPE.v](../../rtl/core/MacPE.v) |
 | [vpu.drawio](vpu.drawio) | 一个后处理通道，实际四路并行 | [VPU.v](../../rtl/core/VPU.v)、[Bias.v](../../rtl/core/Bias.v)、[Requantize.v](../../rtl/core/Requantize.v)、[ReLU.v](../../rtl/core/ReLU.v) |

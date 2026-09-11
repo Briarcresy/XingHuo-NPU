@@ -2,13 +2,17 @@
 
 这份导读按“控制通路、流式数据通路、定点运算、可观测性”的顺序阅读 Core。当前 Core 保持 IEEE Verilog-2005，方便比较传统 Verilog 与 Tile 层 SystemVerilog 的写法。
 
-## 1. 顶层：先找 valid、ready 和 fire
+## 1. 顶层：先看模块连接
 
-从 `rtl/core/XingHuo_NPU.v` 开始。启动与权重装载都写成同一种事务模型：
+从 `rtl/core/XingHuo_NPU.v` 开始。这个文件只连接`CoreController`、
+`MatrixFeeder`、`SystolicArray`、`ResultCollector`和`VPU`，适合先建立整体数据
+流概念。具体的握手和状态逻辑位于`rtl/core/CoreController.v`。
+
+启动与权重装载都采用同一种事务模型：
 
 ```verilog
 start_fire  = start_valid  && start_ready;
-weight_fire = weight_valid && weight_ready;
+weight_load = weight_valid && weight_ready;
 ```
 
 `valid` 表示调用者提出请求，`ready` 表示 Core 当前能够接收，`fire` 表示这个时钟沿真正接受事务。它与常见 ready-valid 总线、流水级接口使用同一个规则。
@@ -17,11 +21,17 @@ Core 将 `start_ready` 和 `weight_ready` 明确输出。发送方必须保持 v
 
 结果也是ready-valid通道。`result_valid`置位后，若`result_ready=0`，Core会保持`result_matrix`、`result_valid`和`busy`；握手后才释放事务槽位。这展示了常见的下游背压。
 
-波形练习：同时观察 `start_valid`、`start_ready`、`start_fire`、`busy`、`result_valid` 和 `result_ready`。先令`result_ready=0`停顿三拍，再置1，确认结果在停顿期间不变。
+波形练习：同时观察 `start_valid`、`start_ready`、`busy`、`result_valid` 和
+`result_ready`。若需要观察内部接受事件，再展开`core_controller.start_fire`。
+先令`result_ready=0`停顿三拍，再置1，确认结果在停顿期间不变。
 
-## 2. ControlUnit：两段式 Moore 状态机
+## 2. CoreController 与 ComputeSequencer
 
-`rtl/core/ControlUnit.v` 把状态机分成两部分：
+`CoreController`是控制平面的模块边界，包含ready-valid握手、权重已装载状态、
+结果保持、Sticky Error（粘滞错误）和性能计数。它内部的`ComputeSequencer`是更小的
+执行状态机，只负责一次矩阵任务的拍级顺序。
+
+`rtl/core/ComputeSequencer.v` 把状态机分成两部分：
 
 - 组合块根据 `state` 和输入计算 `next_state`；
 - 时序块在上升沿执行 `state <= next_state`，并更新 `phase` 和 `done`。
@@ -116,7 +126,7 @@ INT32 partial sum + INT32 bias -> INT32
 一次正常任务建议依次加入：
 
 1. `start_valid/start_ready/start_fire/busy/result_valid/result_ready`；
-2. `control_unit.state/phase`；
+2. `compute_sequencer.state/phase`；
 3. `activation_top_col*` 及其 valid；
 4. 每个 PE 的 activation、partial sum 和 valid；
 5. `result_col*_stream`、Collector 的四个 sum；

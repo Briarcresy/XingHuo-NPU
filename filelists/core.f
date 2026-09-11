@@ -1,6 +1,7 @@
 # XingHuo NPU Core，严格使用IEEE Verilog-2005。
 rtl/core/Bias.v
-rtl/core/ControlUnit.v
+rtl/core/ComputeSequencer.v
+rtl/core/CoreController.v
 rtl/core/MacPE.v
 rtl/core/MatrixFeeder.v
 rtl/core/ReLU.v

@@ -12,7 +12,7 @@ Tile 层公共 SystemVerilog package。它集中定义 Opcode、显示页面、�
 
 ### `XingHuoNpuTile`
 
-MPSoC-Digital 用户设计顶层。它同步外部输入、选择手动或主机控制源、仲裁 Shared RAM，并连接两层网络控制器和显示逻辑。参数 `BUTTON_DEBOUNCE_CYCLES` 设置按钮状态连续稳定多少个周期后才被接受，默认在 200 MHz 下约为 10 ms。
+MPSoC-Digital 用户设计顶层。它同步外部输入、选择手动或主机控制源、仲裁 Shared RAM，并连接两层网络控制器和显示逻辑。参数 `BUTTON_DEBOUNCE_CYCLES` 设置按钮状态连续稳定多少个周期后才被接受，默认在 150 MHz 下约为 10 ms。
 
 | 端口 | 方向/位宽 | 含义与时序 |
 |---|---|---|
@@ -215,7 +215,22 @@ Opcode：0 设置地址，1 写字节并递增地址，2 读字节并递增地�
 | `cycle_count` | 输出 16 bit | 最近成功任务从接受启动到完成的 Core 工作周期数。 |
 | `task_count` | 输出 32 bit | 复位以来成功完成任务数量，自然回绕。 |
 
-### `ControlUnit`
+### `CoreController`
+
+Core控制平面。它接收外部启动、权重与结果握手，管理权重有效位、结果有效位、
+粘滞错误和性能计数，并实例化`ComputeSequencer`产生数据通路控制信号。该模块使
+`XingHuo_NPU`顶层只承担模块连接，不改变原有接口或周期行为。
+
+| 接口组 | 含义 |
+|---|---|
+| `start_valid/start_ready` | 接受一次矩阵任务。 |
+| `weight_valid/weight_ready/weight_load` | 接受完整权重矩阵，并向阵列产生单拍装载事件。 |
+| `result_valid/result_ready` | 保存并消费VPU结果；等待期间保持Core busy。 |
+| `phase/array_clear/array_step/result_write_enable` | 送往数据通路的执行控制。 |
+| `bias_overflow/error/error_code` | 捕获并保持错误状态。 |
+| `weights_loaded/cycle_count/task_count` | 权重与性能可观测状态。 |
+
+### `ComputeSequencer`
 
 Core 控制状态机：`IDLE -> CLEAR -> RUN(phase 0..3) -> COLLECT -> WRITE_RESULT -> IDLE`。
 

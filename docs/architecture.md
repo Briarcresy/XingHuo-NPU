@@ -28,7 +28,11 @@
 
 ![Core 架构](diagrams/core-architecture.svg)
 
-主数据通路是 `MatrixFeeder → SystolicArray → ResultCollector → VPU`。上方的 `ControlUnit`负责清空流水、推进四个 phase、等待收集并使能结果写入。Handshake & status 对应 `XingHuo_NPU.v` 内部的握手、权重有效位、结果有效位、错误寄存器与性能计数器，并非独立模块；为了突出计算通路，图中没有画全其观察连接。
+主数据通路是 `MatrixFeeder → SystolicArray → ResultCollector → VPU`。上方的
+`CoreController`集中处理外部握手、权重/结果状态、粘滞错误和性能计数，并在
+内部实例化`ComputeSequencer`；后者负责清空流水、推进四个phase、等待收集并使能
+结果写入。`XingHuo_NPU`顶层本身只声明模块间连线并实例化这些功能模块，不再
+包含组合译码或时序寄存器。
 
 每个 PE 只有一个当前权重寄存器；权重握手会原子更新完整 2×2 权重矩阵，忙时 `weight_ready=0`。Activation、Bias 和 Shift 没有在 Core 入口另存一份，调用者在任务期间保持它们稳定。结果由 VPU 寄存器保存，`result_valid`保持到下游握手，等待期间 Core 仍为 busy。
 
