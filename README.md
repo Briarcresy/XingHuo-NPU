@@ -31,7 +31,7 @@ design.json     MPSoC-Digital 官方工程描述
 
 最终提交给 MPSoC-Digital 的顶层 `Tile` 由官方导出工具生成。仓库中的用户顶层是 `XingHuoNpuTile`，其端口名称、方向和位宽严格遵循官方契约。Shared RAM 由 SoC 提供，设计只连接其单端口接口，不在 Tile 内重复实例化。
 
-![星火 NPU Tile 总体架构](docs/diagrams/tile-overview.svg)
+![星火 NPU Tile 总览与 Core 微架构](docs/diagrams/xinghuo-architecture.svg)
 
 [查看 Core、阵列、PE、VPU 与 XOR 调度的分层架构图](docs/architecture.md)。
 所有图片都有可在 draw.io 中拖动、编辑的[原生图源](docs/diagrams/README.md)。

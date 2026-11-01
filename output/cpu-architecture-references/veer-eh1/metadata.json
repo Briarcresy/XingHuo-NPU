@@ -1,0 +1,77 @@
+{
+  "title": "VeeR EH1 核复合体与双发射流水线",
+  "core": "VeeR EH1 (formerly SweRV EH1)",
+  "category": "32 位嵌入式超标量；主要顺序执行，含部分乱序执行能力",
+  "source_page": "https://github.com/chipsalliance/Cores-VeeR-EH1/blob/main/docs/RISC-V_VeeR_EH1_PRM.pdf",
+  "asset_url": "https://raw.githubusercontent.com/chipsalliance/Cores-VeeR-EH1/main/docs/RISC-V_VeeR_EH1_PRM.pdf",
+  "document_title": "RISC-V VeeR EH1 Programmer's Reference Manual",
+  "version": "Rev. 1.9, 2022-12-22",
+  "figures": [
+    {
+      "figure": "Figure 1-1",
+      "title": "VeeR EH1 Core Complex",
+      "pdf_page": 20,
+      "printed_page": 1,
+      "file": "veer-eh1-core-complex-figure1-1.png",
+      "render_dpi": 300,
+      "crop_px": [
+        276,
+        1440,
+        1860,
+        1515
+      ]
+    },
+    {
+      "figure": "Figure 1-2",
+      "title": "VeeR EH1 Core Pipeline",
+      "pdf_page": 21,
+      "printed_page": 2,
+      "file": "veer-eh1-core-pipeline-figure1-2.png",
+      "render_dpi": 300,
+      "crop_px": [
+        276,
+        912,
+        2010,
+        1495
+      ]
+    }
+  ],
+  "reference_value_zh": "流水线图按阶段纵向展开，横向并列 I0/I1、访存、乘法和除法，直观标出停顿、提交与写回；核复合体图适合参考 CPU、紧耦合存储器及总线端口的层级边界。",
+  "license": {
+    "statement": "Copyright © 2022 CHIPS Alliance; Licensed under Apache-2.0",
+    "evidence": "PDF 每页页脚，包括 PDF 第20、21页。"
+  },
+  "files": [
+    "veer-eh1-programmers-reference.pdf",
+    "veer-eh1-core-complex-figure1-1.png",
+    "veer-eh1-core-pipeline-figure1-2.png"
+  ],
+  "preview": "veer-eh1-core-pipeline-figure1-2.png",
+  "transform": "原 PDF 经 Poppler 300 dpi 渲染后裁出图和原图题，未重绘或修改图中文字。",
+  "downloaded_date": "2026-11-01",
+  "file_details": [
+    {
+      "file": "veer-eh1-programmers-reference.pdf",
+      "bytes": 1449355,
+      "sha256": "ebe35853cdbc49320b5bacd97f0b5d3ef79296203fd6b4fb1f73f6c5abddf3c9"
+    },
+    {
+      "file": "veer-eh1-core-complex-figure1-1.png",
+      "bytes": 143316,
+      "sha256": "201893e4d24b1148c00a31bc6708a4e91a6bbbe5cf361e8a74f4e986b38e0e8c",
+      "pixels": [
+        1860,
+        1515
+      ]
+    },
+    {
+      "file": "veer-eh1-core-pipeline-figure1-2.png",
+      "bytes": 172395,
+      "sha256": "caf83743c1220dc82f34c4e4fbba9fd59dcd3a218866e429bd8ee1806379835a",
+      "pixels": [
+        2010,
+        1495
+      ]
+    }
+  ]
+}

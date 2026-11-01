@@ -1,0 +1,151 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1560" height="1110" viewBox="0 0 1560 1110" version="1.1" font-family="Arial, Helvetica, sans-serif">
+  <title>XingHuo NPU architecture</title>
+  <desc>Tile overview and expanded NPU core. Functional colors; one synchronous clock domain. Shared RAM is provided by the SoC outside the Tile. The lower panel expands the same core shown above, not a second instance.</desc>
+  <defs>
+    <marker id="arrow_0" markerWidth="8" markerHeight="7" refX="7" refY="3.5" orient="auto-start-reverse" markerUnits="userSpaceOnUse" viewBox="0 0 8 7" overflow="visible">
+      <path d="M 0 0 L 7 3.5 L 0 7 Z" fill="#A7752B" stroke="none" />
+    </marker>
+    <marker id="arrow_1" markerWidth="8" markerHeight="7" refX="7" refY="3.5" orient="auto-start-reverse" markerUnits="userSpaceOnUse" viewBox="0 0 8 7" overflow="visible">
+      <path d="M 0 0 L 7 3.5 L 0 7 Z" fill="#213547" stroke="none" />
+    </marker>
+    <marker id="arrow_2" markerWidth="8" markerHeight="7" refX="7" refY="3.5" orient="auto-start-reverse" markerUnits="userSpaceOnUse" viewBox="0 0 8 7" overflow="visible">
+      <path d="M 0 0 L 7 3.5 L 0 7 Z" fill="#287B6D" stroke="none" />
+    </marker>
+    <marker id="arrow_3" markerWidth="8" markerHeight="7" refX="7" refY="3.5" orient="auto-start-reverse" markerUnits="userSpaceOnUse" viewBox="0 0 8 7" overflow="visible">
+      <path d="M 0 0 L 7 3.5 L 0 7 Z" fill="#4B7795" stroke="none" />
+    </marker>
+  </defs>
+  <path id="canvas_background" d="M 0 0 h 1560 v 1110 h -1560 Z" fill="#FFFFFF" stroke="none" />
+  <rect id="group_tile" x="40" y="170" width="1180" height="340" rx="8" fill="#FCFDFE" stroke="#BCCAD2" stroke-width="1.2" stroke-dasharray="7 5" />
+  <rect id="group_core_detail" x="40" y="610" width="1480" height="410" rx="8" fill="#FFFFFF" stroke="#BCCAD2" stroke-width="1.2" />
+  <path id="edge_frontends__mode_select" d="M 300 285 L 365 285" fill="none" stroke="#A7752B" stroke-width="1.8" stroke-linecap="butt" stroke-linejoin="round" stroke-dasharray="6 4" marker-end="url(#arrow_0)" />
+  <path id="edge_mode_select__network_sequencer" d="M 530 285 L 600 285" fill="none" stroke="#A7752B" stroke-width="1.8" stroke-linecap="butt" stroke-linejoin="round" stroke-dasharray="6 4" marker-end="url(#arrow_0)" />
+  <path id="edge_network_sequencer__core_overview" d="M 860 260 L 950 260" fill="none" stroke="#213547" stroke-width="2.2" stroke-linecap="butt" stroke-linejoin="round" marker-end="url(#arrow_1)" />
+  <path id="edge_core_overview__network_sequencer" d="M 950 315 L 860 315" fill="none" stroke="#287B6D" stroke-width="2.6" stroke-linecap="butt" stroke-linejoin="round" marker-end="url(#arrow_2)" />
+  <path id="edge_frontends__ram_arbiter" d="M 190 340 L 190 442 L 600 442" fill="none" stroke="#4B7795" stroke-width="2.2" stroke-linecap="butt" stroke-linejoin="round" marker-end="url(#arrow_3)" />
+  <path id="edge_network_sequencer__ram_arbiter" d="M 700 360 L 700 410" fill="none" stroke="#4B7795" stroke-width="2.2" stroke-linecap="butt" stroke-linejoin="round" marker-end="url(#arrow_3)" />
+  <path id="edge_ram_arbiter__shared_ram" d="M 860 442 L 1290 442" fill="none" stroke="#4B7795" stroke-width="2.2" stroke-linecap="butt" stroke-linejoin="round" marker-end="url(#arrow_3)" />
+  <path id="edge_shared_ram__network_sequencer" d="M 1290 390 L 790 390 L 790 360" fill="none" stroke="#4B7795" stroke-width="2.2" stroke-linecap="butt" stroke-linejoin="round" marker-end="url(#arrow_3)" />
+  <path id="edge_feeder__array" d="M 270 850 L 355 850" fill="none" stroke="#4B7795" stroke-width="2.8" stroke-linecap="butt" stroke-linejoin="round" marker-end="url(#arrow_3)" />
+  <path id="edge_array__collector" d="M 825 850 L 910 850" fill="none" stroke="#287B6D" stroke-width="2.8" stroke-linecap="butt" stroke-linejoin="round" marker-end="url(#arrow_2)" />
+  <path id="edge_collector__vpu" d="M 1085 850 L 1170 850" fill="none" stroke="#287B6D" stroke-width="2.8" stroke-linecap="butt" stroke-linejoin="round" marker-end="url(#arrow_2)" />
+  <path id="edge_core_control__feeder" d="M 395 690 L 395 710 L 175 710 L 175 765" fill="none" stroke="#A7752B" stroke-width="1.7" stroke-linecap="butt" stroke-linejoin="round" stroke-dasharray="6 4" marker-end="url(#arrow_0)" />
+  <path id="edge_core_control__array" d="M 590 690 L 590 730" fill="none" stroke="#A7752B" stroke-width="1.7" stroke-linecap="butt" stroke-linejoin="round" stroke-dasharray="6 4" marker-end="url(#arrow_0)" />
+  <path id="edge_core_control__collector" d="M 997.5 690 L 997.5 765" fill="none" stroke="#A7752B" stroke-width="1.7" stroke-linecap="butt" stroke-linejoin="round" stroke-dasharray="6 4" marker-end="url(#arrow_0)" />
+  <path id="edge_core_control__vpu" d="M 1450 690 L 1450 765" fill="none" stroke="#A7752B" stroke-width="1.7" stroke-linecap="butt" stroke-linejoin="round" stroke-dasharray="6 4" marker-end="url(#arrow_0)" />
+  <rect id="frontends" x="80" y="230" width="220" height="110" rx="4" fill="#EDF4F9" stroke="#4B7795" stroke-width="1.5" />
+  <rect id="mode_select" x="365" y="245" width="165" height="80" rx="4" fill="#FBF2DF" stroke="#A7752B" stroke-width="1.5" />
+  <rect id="network_sequencer" x="600" y="220" width="260" height="140" rx="4" fill="#FBF2DF" stroke="#A7752B" stroke-width="1.5" />
+  <rect id="core_overview" x="950" y="230" width="230" height="110" rx="4" fill="#E9F4EF" stroke="#287B6D" stroke-width="1.5" />
+  <rect id="ram_arbiter" x="600" y="410" width="260" height="65" rx="4" fill="#EDF4F9" stroke="#4B7795" stroke-width="1.5" />
+  <rect id="shared_ram" x="1290" y="230" width="230" height="250" rx="4" fill="#F2F5F7" stroke="#8498A6" stroke-width="1.5" />
+  <rect id="core_control" x="355" y="635" width="1125" height="55" rx="4" fill="#FBF2DF" stroke="#A7752B" stroke-width="1.5" />
+  <rect id="feeder" x="80" y="765" width="190" height="165" rx="4" fill="#EDF4F9" stroke="#4B7795" stroke-width="1.5" />
+  <rect id="array" x="355" y="730" width="470" height="250" rx="4" fill="#F4FAF7" stroke="#287B6D" stroke-width="1.5" />
+  <rect id="collector" x="910" y="765" width="175" height="165" rx="4" fill="#EDF4F9" stroke="#4B7795" stroke-width="1.5" />
+  <rect id="vpu" x="1170" y="765" width="310" height="165" rx="4" fill="#E9F4EF" stroke="#287B6D" stroke-width="1.5" />
+  <path id="decoration_1" fill="none" stroke="#DCE4E9" stroke-width="1.2" d="M 40 109 L 1520 109" />
+  <path id="decoration_2" fill="#DCE6ED" stroke="#9BABB8" stroke-width="0.8" d="M 1320 324 h 24 v 15 h -24 Z" />
+  <path id="decoration_3" fill="#DCE6ED" stroke="#9BABB8" stroke-width="0.8" d="M 1344 324 h 24 v 15 h -24 Z" />
+  <path id="decoration_4" fill="#DCE6ED" stroke="#9BABB8" stroke-width="0.8" d="M 1368 324 h 24 v 15 h -24 Z" />
+  <path id="decoration_5" fill="#DCE6ED" stroke="#9BABB8" stroke-width="0.8" d="M 1392 324 h 24 v 15 h -24 Z" />
+  <path id="decoration_6" fill="#DCE6ED" stroke="#9BABB8" stroke-width="0.8" d="M 1416 324 h 24 v 15 h -24 Z" />
+  <path id="decoration_7" fill="#DCE6ED" stroke="#9BABB8" stroke-width="0.8" d="M 1440 324 h 24 v 15 h -24 Z" />
+  <path id="decoration_8" fill="#DCE6ED" stroke="#9BABB8" stroke-width="0.8" d="M 1464 324 h 24 v 15 h -24 Z" />
+  <path id="decoration_9" fill="none" stroke="#4B7795" stroke-width="2.1" marker-end="url(#arrow_3)" d="M 295 745 L 355 745" />
+  <path id="decoration_10" fill="none" stroke="#4B7795" stroke-width="2.1" marker-end="url(#arrow_3)" d="M 1290 739 L 1290 765" />
+  <path id="pe_W00" fill="#DCEFE7" stroke="#287B6D" stroke-width="1.4" d="M 398 790 H 522 Q 525 790 525 793 V 847 Q 525 850 522 850 H 398 Q 395 850 395 847 V 793 Q 395 790 398 790 Z" />
+  <path id="pe_W10" fill="#DCEFE7" stroke="#287B6D" stroke-width="1.4" d="M 658 790 H 782 Q 785 790 785 793 V 847 Q 785 850 782 850 H 658 Q 655 850 655 847 V 793 Q 655 790 658 790 Z" />
+  <path id="pe_W01" fill="#DCEFE7" stroke="#287B6D" stroke-width="1.4" d="M 398 895 H 522 Q 525 895 525 898 V 952 Q 525 955 522 955 H 398 Q 395 955 395 952 V 898 Q 395 895 398 895 Z" />
+  <path id="pe_W11" fill="#DCEFE7" stroke="#287B6D" stroke-width="1.4" d="M 658 895 H 782 Q 785 895 785 898 V 952 Q 785 955 782 955 H 658 Q 655 955 655 952 V 898 Q 655 895 658 895 Z" />
+  <path id="decoration_15" fill="none" stroke="#4B7795" stroke-width="2.1" marker-end="url(#arrow_3)" d="M 460 850 L 460 895" />
+  <path id="decoration_16" fill="none" stroke="#4B7795" stroke-width="2.1" marker-end="url(#arrow_3)" d="M 720 850 L 720 895" />
+  <path id="decoration_17" fill="none" stroke="#287B6D" stroke-width="2.4" marker-end="url(#arrow_2)" d="M 525 820 L 655 820" />
+  <path id="decoration_18" fill="none" stroke="#287B6D" stroke-width="2.4" marker-end="url(#arrow_2)" d="M 525 925 L 655 925" />
+  <path id="decoration_19" fill="none" stroke="#287B6D" stroke-width="2.7" marker-end="url(#arrow_2)" d="M 1325 930 L 1325 957" />
+  <path id="decoration_20" fill="none" stroke="#DCE4E9" stroke-width="1.2" d="M 40 1041 L 1520 1041" />
+  <path id="decoration_21" fill="#EDF4F9" stroke="#BCCAD2" stroke-width="0.8" d="M 40 1064 h 24 v 18 h -24 Z" />
+  <path id="decoration_22" fill="#FBF2DF" stroke="#BCCAD2" stroke-width="0.8" d="M 350 1064 h 24 v 18 h -24 Z" />
+  <path id="decoration_23" fill="#E9F4EF" stroke="#BCCAD2" stroke-width="0.8" d="M 540 1064 h 24 v 18 h -24 Z" />
+  <path id="decoration_24" fill="none" stroke="#213547" stroke-width="2.2" marker-end="url(#arrow_1)" d="M 770 1073 L 820 1073" />
+  <path id="decoration_25" fill="none" stroke="#A7752B" stroke-width="1.7" stroke-dasharray="6 4" marker-end="url(#arrow_0)" d="M 935 1073 L 985 1073" />
+  <text id="label_26" x="332.5" y="274" fill="#A7752B" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="400" text-anchor="middle" font-style="normal">cmd</text>
+  <text id="label_27" x="565" y="274" fill="#A7752B" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="400" text-anchor="middle" font-style="normal">start</text>
+  <text id="label_28" x="905" y="249" fill="#213547" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="400" text-anchor="middle" font-style="normal">task / W</text>
+  <text id="label_29" x="905" y="304" fill="#287B6D" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="400" text-anchor="middle" font-style="normal">result</text>
+  <text id="label_30" x="391" y="430" fill="#4B7795" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" text-anchor="middle" font-style="normal">Host / manual RAM access</text>
+  <text id="label_31" x="1075" y="431" fill="#4B7795" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" text-anchor="middle" font-style="normal">addr[7:0] · we · wdata[7:0]</text>
+  <text id="label_32" x="1040" y="379" fill="#4B7795" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" text-anchor="middle" font-style="normal">rdata[7:0]</text>
+  <text id="label_33" x="312.5" y="838" fill="#4B7795" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="400" text-anchor="middle" font-style="normal">2×INT8</text>
+  <text id="label_34" x="867.5" y="838" fill="#287B6D" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="400" text-anchor="middle" font-style="normal">2×INT32</text>
+  <text id="label_35" x="1127.5" y="838" fill="#287B6D" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="400" text-anchor="middle" font-style="normal">4×INT32</text>
+  <text id="label_36" x="190" y="266" fill="#213547" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="600" text-anchor="middle" font-style="normal">Input frontends</text>
+  <text id="label_37" x="190" y="297" fill="#213547" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="400" text-anchor="middle" font-style="normal">Manual / host</text>
+  <text id="label_38" x="190" y="323" fill="#627483" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="400" text-anchor="middle" font-style="normal">Sync · debounce · toggle</text>
+  <text id="label_39" x="447.5" y="276" fill="#213547" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="600" text-anchor="middle" font-style="normal">Mode +</text>
+  <text id="label_40" x="447.5" y="304" fill="#213547" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="600" text-anchor="middle" font-style="normal">command</text>
+  <text id="label_41" x="730" y="251" fill="#213547" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="600" text-anchor="middle" font-style="normal">Two-layer sequencer</text>
+  <text id="label_42" x="730" y="280" fill="#213547" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400" text-anchor="middle" font-style="normal">A / W / Bias / Shift</text>
+  <text id="label_43" x="730" y="317" fill="#213547" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="600" text-anchor="middle" font-style="normal">L1 → H → L2</text>
+  <text id="label_44" x="730" y="344" fill="#627483" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="400" text-anchor="middle" font-style="normal">XorNetworkController</text>
+  <text id="label_45" x="1065" y="271" fill="#213547" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="600" text-anchor="middle" font-style="normal">NPU Core</text>
+  <text id="label_46" x="1065" y="307" fill="#213547" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="400" text-anchor="middle" font-style="normal">2×2 INT8 · see (b)</text>
+  <text id="label_47" x="730" y="438" fill="#213547" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="600" text-anchor="middle" font-style="normal">RAM write arbiter</text>
+  <text id="label_48" x="730" y="463" fill="#627483" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="400" text-anchor="middle" font-style="normal">Address / write select</text>
+  <text id="label_49" x="1405" y="269" fill="#213547" font-family="Arial, Helvetica, sans-serif" font-size="23" font-weight="600" text-anchor="middle" font-style="normal">SoC Shared RAM</text>
+  <text id="label_50" x="1405" y="306" fill="#213547" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="600" text-anchor="middle" font-style="normal">256 × 8 bit</text>
+  <text id="label_51" x="1405" y="363" fill="#627483" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400" text-anchor="middle" font-style="normal">A · W · B · H · Y</text>
+  <text id="label_52" x="1405" y="405" fill="#213547" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400" text-anchor="middle" font-style="normal">Async read</text>
+  <text id="label_53" x="1405" y="432" fill="#213547" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400" text-anchor="middle" font-style="normal">Sync write</text>
+  <text id="label_54" x="1405" y="463" fill="#213547" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="600" text-anchor="middle" font-style="normal">Outside the Tile</text>
+  <text id="label_55" x="380" y="670" fill="#213547" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="600" text-anchor="start" font-style="normal">CoreController</text>
+  <text id="label_56" x="1455" y="670" fill="#213547" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="400" text-anchor="end" font-style="normal">Handshake · ComputeSequencer: phase / write-enable</text>
+  <text id="label_57" x="175" y="810" fill="#213547" font-family="Arial, Helvetica, sans-serif" font-size="23" font-weight="600" text-anchor="middle" font-style="normal">Matrix feeder</text>
+  <text id="label_58" x="175" y="845" fill="#213547" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="400" text-anchor="middle" font-style="normal">A · 4×INT8</text>
+  <text id="label_59" x="175" y="876" fill="#213547" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="400" text-anchor="middle" font-style="normal">Skew + valid</text>
+  <text id="label_60" x="175" y="907" fill="#627483" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="400" text-anchor="middle" font-style="normal">MatrixFeeder</text>
+  <text id="label_61" x="590" y="760" fill="#213547" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="600" text-anchor="middle" font-style="normal">2×2 weight-stationary array</text>
+  <text id="label_62" x="997.5" y="810" fill="#213547" font-family="Arial, Helvetica, sans-serif" font-size="23" font-weight="600" text-anchor="middle" font-style="normal">Result</text>
+  <text id="label_63" x="997.5" y="838" fill="#213547" font-family="Arial, Helvetica, sans-serif" font-size="23" font-weight="600" text-anchor="middle" font-style="normal">collector</text>
+  <text id="label_64" x="997.5" y="876" fill="#213547" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="400" text-anchor="middle" font-style="normal">4×INT32</text>
+  <text id="label_65" x="997.5" y="906" fill="#627483" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" text-anchor="middle" font-style="normal">Registers</text>
+  <text id="label_66" x="1325" y="801" fill="#213547" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="600" text-anchor="middle" font-style="normal">Vector post-process</text>
+  <text id="label_67" x="1325" y="840" fill="#213547" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="400" text-anchor="middle" font-style="normal">Bias → Shift → Saturate</text>
+  <text id="label_68" x="1325" y="872" fill="#213547" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="400" text-anchor="middle" font-style="normal">ReLU → Result register</text>
+  <text id="label_69" x="1325" y="907" fill="#627483" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" text-anchor="middle" font-style="normal">4 lanes · INT32 → INT8</text>
+  <text id="label_70" x="40" y="55" fill="#213547" font-family="Arial, Helvetica, sans-serif" font-size="36" font-weight="700" text-anchor="start" font-style="normal">XingHuo NPU</text>
+  <text id="label_71" x="40" y="87" fill="#627483" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="400" text-anchor="start" font-style="normal">A compact, two-layer neural accelerator</text>
+  <text id="label_72" x="1520" y="55" fill="#213547" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="700" text-anchor="end" font-style="normal">2×2 INT8  /  WEIGHT STATIONARY</text>
+  <text id="label_73" x="1520" y="84" fill="#627483" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400" text-anchor="end" font-style="normal">MPSoC-Digital Tile</text>
+  <text id="label_74" x="40" y="149" fill="#213547" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700" text-anchor="start" font-style="normal">(a)  Tile-level architecture</text>
+  <text id="label_75" x="60" y="196" fill="#627483" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="600" text-anchor="start" font-style="normal">XingHuoNpuTile</text>
+  <text id="label_76" x="1180" y="196" fill="#627483" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="400" text-anchor="end" font-style="normal">User logic boundary</text>
+  <text id="label_77" x="80" y="492" fill="#627483" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" text-anchor="start" font-style="normal">Display + response → LED / HEX / customOut</text>
+  <text id="label_78" x="40" y="540" fill="#627483" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" text-anchor="start" font-style="normal">Read data also feeds host / display directly; observation and handshake return wires are omitted.</text>
+  <text id="label_79" x="40" y="587" fill="#213547" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700" text-anchor="start" font-style="normal">(b)  Core microarchitecture</text>
+  <text id="label_80" x="1520" y="587" fill="#627483" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" text-anchor="end" font-style="normal">XingHuo_NPU · the same core as in (a)</text>
+  <text id="label_81" x="80" y="661" fill="#213547" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="600" text-anchor="start" font-style="normal">A / W / Bias / Shift</text>
+  <text id="label_82" x="80" y="688" fill="#627483" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="400" text-anchor="start" font-style="normal">Held by sequencer</text>
+  <text id="label_83" x="285" y="749" fill="#4B7795" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="400" text-anchor="end" font-style="normal">W · 4×INT8</text>
+  <text id="label_84" x="1290" y="727" fill="#4B7795" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="400" text-anchor="middle" font-style="normal">Bias · 2×INT32 + shift[4:0]</text>
+  <text id="label_85" x="867.5" y="875" fill="#627483" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="400" text-anchor="middle" font-style="normal">streams</text>
+  <text id="label_86" x="460" y="815" fill="#213547" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="600" text-anchor="middle" font-style="normal">MAC</text>
+  <text id="label_87" x="460" y="839" fill="#213547" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400" text-anchor="middle" font-style="normal">W00</text>
+  <text id="label_88" x="720" y="815" fill="#213547" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="600" text-anchor="middle" font-style="normal">MAC</text>
+  <text id="label_89" x="720" y="839" fill="#213547" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400" text-anchor="middle" font-style="normal">W10</text>
+  <text id="label_90" x="460" y="920" fill="#213547" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="600" text-anchor="middle" font-style="normal">MAC</text>
+  <text id="label_91" x="460" y="944" fill="#213547" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400" text-anchor="middle" font-style="normal">W01</text>
+  <text id="label_92" x="720" y="920" fill="#213547" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="600" text-anchor="middle" font-style="normal">MAC</text>
+  <text id="label_93" x="720" y="944" fill="#213547" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400" text-anchor="middle" font-style="normal">W11</text>
+  <text id="label_94" x="590" y="809" fill="#287B6D" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="400" text-anchor="middle" font-style="normal">psum</text>
+  <text id="label_95" x="484" y="878" fill="#4B7795" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="400" text-anchor="start" font-style="normal">act.</text>
+  <text id="label_96" x="590" y="1007" fill="#627483" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" text-anchor="middle" font-style="normal">Activation ↓   ·   INT32 partial sum →</text>
+  <text id="label_97" x="1325" y="989" fill="#287B6D" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="600" text-anchor="middle" font-style="normal">Y · 4×INT8 → sequencer</text>
+  <text id="label_98" x="76" y="1080" fill="#627483" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" text-anchor="start" font-style="normal">Interfaces / registers</text>
+  <text id="label_99" x="386" y="1080" fill="#627483" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" text-anchor="start" font-style="normal">Control</text>
+  <text id="label_100" x="576" y="1080" fill="#627483" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" text-anchor="start" font-style="normal">Compute</text>
+  <text id="label_101" x="834" y="1080" fill="#627483" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" text-anchor="start" font-style="normal">Data</text>
+  <text id="label_102" x="999" y="1080" fill="#627483" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" text-anchor="start" font-style="normal">Control</text>
+  <text id="label_103" x="1520" y="1080" fill="#627483" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" text-anchor="end" font-style="normal">One clock domain</text>
+</svg>
