@@ -1,0 +1,409 @@
+{
+  "title": "",
+  "top": "XingHuoNpuTile",
+  "theme": "light",
+  "legend": false,
+  "grid": {
+    "cell_w": 20,
+    "cell_h": 20,
+    "gutter_x": 0,
+    "gutter_y": 0,
+    "margin": 0
+  },
+  "domains": {
+    "clock": {
+      "color": "#EDF4F9",
+      "border": "#4B7795"
+    }
+  },
+  "groups": {},
+  "blocks": [
+    {
+      "id": "frontends",
+      "row": 11.5,
+      "col": 4.0,
+      "w": 220,
+      "h": 110,
+      "label": "Input frontends",
+      "domain": "clock"
+    },
+    {
+      "id": "mode_select",
+      "row": 12.25,
+      "col": 18.25,
+      "w": 165,
+      "h": 80,
+      "label": "Mode and command",
+      "domain": "clock"
+    },
+    {
+      "id": "network_sequencer",
+      "row": 11.0,
+      "col": 30.0,
+      "w": 260,
+      "h": 140,
+      "label": "Two-layer sequencer",
+      "domain": "clock"
+    },
+    {
+      "id": "core_overview",
+      "row": 11.5,
+      "col": 47.5,
+      "w": 230,
+      "h": 110,
+      "label": "NPU Core",
+      "domain": "clock"
+    },
+    {
+      "id": "ram_arbiter",
+      "row": 20.5,
+      "col": 30.0,
+      "w": 260,
+      "h": 65,
+      "label": "RAM write arbiter",
+      "domain": "clock"
+    },
+    {
+      "id": "shared_ram",
+      "row": 11.5,
+      "col": 64.5,
+      "w": 230,
+      "h": 250,
+      "label": "SoC Shared RAM",
+      "external": true
+    },
+    {
+      "id": "core_control",
+      "row": 31.75,
+      "col": 17.75,
+      "w": 1125,
+      "h": 55,
+      "label": "Core control",
+      "domain": "clock"
+    },
+    {
+      "id": "feeder",
+      "row": 38.25,
+      "col": 4.0,
+      "w": 190,
+      "h": 165,
+      "label": "Matrix feeder",
+      "domain": "clock"
+    },
+    {
+      "id": "array",
+      "row": 36.5,
+      "col": 17.75,
+      "w": 470,
+      "h": 250,
+      "label": "2x2 weight-stationary array",
+      "domain": "clock"
+    },
+    {
+      "id": "collector",
+      "row": 38.25,
+      "col": 45.5,
+      "w": 175,
+      "h": 165,
+      "label": "Result collector",
+      "domain": "clock"
+    },
+    {
+      "id": "vpu",
+      "row": 38.25,
+      "col": 58.5,
+      "w": 310,
+      "h": 165,
+      "label": "Vector post-process",
+      "domain": "clock"
+    }
+  ],
+  "edges": [
+    {
+      "from": "frontends",
+      "to": "mode_select",
+      "kind": "generic",
+      "width": "cmd",
+      "route": {
+        "points": [
+          [
+            300,
+            285
+          ],
+          [
+            365,
+            285
+          ]
+        ]
+      }
+    },
+    {
+      "from": "mode_select",
+      "to": "network_sequencer",
+      "kind": "generic",
+      "width": "start",
+      "route": {
+        "points": [
+          [
+            530,
+            285
+          ],
+          [
+            600,
+            285
+          ]
+        ]
+      }
+    },
+    {
+      "from": "network_sequencer",
+      "to": "core_overview",
+      "kind": "generic",
+      "width": "task/W",
+      "route": {
+        "points": [
+          [
+            860,
+            260
+          ],
+          [
+            950,
+            260
+          ]
+        ]
+      }
+    },
+    {
+      "from": "core_overview",
+      "to": "network_sequencer",
+      "kind": "generic",
+      "width": 32,
+      "route": {
+        "points": [
+          [
+            950,
+            315
+          ],
+          [
+            860,
+            315
+          ]
+        ]
+      }
+    },
+    {
+      "from": "frontends",
+      "to": "ram_arbiter",
+      "kind": "generic",
+      "width": "8b RAM access",
+      "route": {
+        "points": [
+          [
+            190,
+            340
+          ],
+          [
+            190,
+            442
+          ],
+          [
+            600,
+            442
+          ]
+        ]
+      }
+    },
+    {
+      "from": "network_sequencer",
+      "to": "ram_arbiter",
+      "kind": "generic",
+      "width": "8b write",
+      "route": {
+        "points": [
+          [
+            700,
+            360
+          ],
+          [
+            700,
+            410
+          ]
+        ]
+      }
+    },
+    {
+      "from": "ram_arbiter",
+      "to": "shared_ram",
+      "kind": "generic",
+      "width": "8b addr/data",
+      "route": {
+        "points": [
+          [
+            860,
+            442
+          ],
+          [
+            1290,
+            442
+          ]
+        ]
+      }
+    },
+    {
+      "from": "shared_ram",
+      "to": "network_sequencer",
+      "kind": "generic",
+      "width": 8,
+      "route": {
+        "points": [
+          [
+            1290,
+            390
+          ],
+          [
+            790,
+            390
+          ],
+          [
+            790,
+            360
+          ]
+        ]
+      }
+    },
+    {
+      "from": "feeder",
+      "to": "array",
+      "kind": "generic",
+      "width": "2x8b",
+      "route": {
+        "points": [
+          [
+            270,
+            850
+          ],
+          [
+            355,
+            850
+          ]
+        ]
+      }
+    },
+    {
+      "from": "array",
+      "to": "collector",
+      "kind": "generic",
+      "width": "2x32b",
+      "route": {
+        "points": [
+          [
+            825,
+            850
+          ],
+          [
+            910,
+            850
+          ]
+        ]
+      }
+    },
+    {
+      "from": "collector",
+      "to": "vpu",
+      "kind": "generic",
+      "width": "4x32b",
+      "route": {
+        "points": [
+          [
+            1085,
+            850
+          ],
+          [
+            1170,
+            850
+          ]
+        ]
+      }
+    },
+    {
+      "from": "core_control",
+      "to": "feeder",
+      "kind": "generic",
+      "width": "control",
+      "route": {
+        "points": [
+          [
+            395,
+            690
+          ],
+          [
+            395,
+            710
+          ],
+          [
+            175,
+            710
+          ],
+          [
+            175,
+            765
+          ]
+        ]
+      }
+    },
+    {
+      "from": "core_control",
+      "to": "array",
+      "kind": "generic",
+      "width": "control",
+      "route": {
+        "points": [
+          [
+            590,
+            690
+          ],
+          [
+            590,
+            730
+          ]
+        ]
+      }
+    },
+    {
+      "from": "core_control",
+      "to": "collector",
+      "kind": "generic",
+      "width": "control",
+      "route": {
+        "points": [
+          [
+            997.5,
+            690
+          ],
+          [
+            997.5,
+            765
+          ]
+        ]
+      }
+    },
+    {
+      "from": "core_control",
+      "to": "vpu",
+      "kind": "generic",
+      "width": "control",
+      "route": {
+        "points": [
+          [
+            1450,
+            690
+          ],
+          [
+            1450,
+            765
+          ]
+        ]
+      }
+    }
+  ]
+}

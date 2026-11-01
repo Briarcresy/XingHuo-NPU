@@ -1,0 +1,62 @@
+XingHuo NPU 架构图预览
+日期：2026-11-01
+
+此目录为待审阅的新图。README.md 与 docs/diagrams/ 中的原有 SVG、draw.io 均未修改。
+
+文件
+- xinghuo-architecture.png：3120 × 2220 高清预览。
+- xinghuo-architecture-readme.png：900 px 宽预览，用于检查 README 中的显示效果。
+- xinghuo-architecture.svg：1560 × 1110 矢量图，文字与形状均为原生 SVG，无嵌入位图。
+- xinghuo-architecture.drawio：原生可编辑对象及带端点附着的连线。
+- xinghuo-architecture.json：完整结构与排版源。
+- topology.json：适配 hdldiagzero 严格 schema 的基础拓扑。
+- render.py：仅供此预览使用的 JSON 排版渲染器；不参与现有文档图源导出流程。
+
+设计依据
+1. Gemmini: Enabling Systematic Deep-Learning Architecture Evaluation via Full-Stack Integration
+   Fig. 1，PDF 第 1 页；已下载并实际查看。
+   https://arxiv.org/pdf/1911.09925
+   借鉴系统边界与计算核心分层、控制/存储/计算的分组方式。
+2. In-Datacenter Performance Analysis of a Tensor Processing Unit
+   Fig. 1，PDF 第 3 页；已下载并实际查看。
+   https://arxiv.org/pdf/1704.04760.pdf
+   https://research.google/pubs/in-datacenter-performance-analysis-of-a-tensor-processing-unit/
+   借鉴功能配色、主数据通路、计算阵列内部结构的视觉强调。
+3. Eyeriss: An Energy-Efficient Reconfigurable Accelerator for Deep Convolutional Neural Networks
+   ISSCC 2016，Fig. 14.5.2，PDF 第 2 页（印刷页 263）。
+   https://www.rle.mit.edu/eems/wp-content/uploads/2016/02/eyeriss_isscc_2016.pdf
+   实际查看的是作者项目网站发布的高清架构图：
+   https://eyeriss.mit.edu/images/architecture.png
+   借鉴分开的操作数路径和重复 PE 的表达。
+
+这里仅借鉴绘图方法；图中模块与连接均按本仓库 RTL 重新绘制。
+没有引入参考架构中的 CPU、DMA、AXI、DDR 或大容量片上缓存。
+
+读图说明
+- (a) 是 XingHuoNpuTile 总览；(b) 展开的是 (a) 中同一个 XingHuo_NPU，非第二份硬件。
+- 11 个基础功能框；其中 Core 在两级视图中重复表示。4 个 PE 为阵列内部图形。
+- 一个内部时钟域。颜色区分功能类型，不代表不同的时钟域。
+- 两层网络复用同一个 Core，H 为真实第一层输出。
+- Shared RAM 位于 Tile 外部。仲裁器仅选择地址/写通路，读数据直接扇出。
+- 显示/应答模块以文字注释概括，观察连线与握手返回信号省略。
+- W00/W10 位于上排，W01/W11 位于下排；激活向下，部分和向右。
+- Array 输出为两条 INT32 流；Collector 保存四个 INT32 结果。
+- VPU 顺序为 Bias、算术右移、INT8 饱和、ReLU、结果寄存器。
+- A/W/Bias/Shift 由 sequencer 保持；图中短入端箭头表明 W、Bias 和 Shift 的消费模块。
+
+检查结果
+- 独立 RTL 语义审查通过。
+- hdldiagzero validate_spec.py：基础拓扑 PASS。
+- hdldiagzero render.py + validate.py：11 个功能框、15 条连接、1 个时钟域，0 项拓扑几何错误。
+- 最终 SVG：对 15 条真实主连线和全部 78 个文字对象复用几何检查，0 项错误。
+  功能图标、分隔线、PE 内部示意和短输入/输出注释不按跨模块主连线检查；控制线不要求数据位宽标签。
+  原版 flat validator 会把矩形图标与分隔线误判为连线，不能据此声称未筛选的全图检查通过。
+- 已实际查看高清与 900 px 宽渲染，核查文字、端点、方向和画布边界。
+- 本次只生成图稿，未改动 RTL，不构成功能仿真或时序验证。
+
+重新生成预览（在项目根目录运行）
+python output/architecture-preview/render.py \
+  output/architecture-preview/xinghuo-architecture.json \
+  output/architecture-preview/xinghuo-architecture
+
+图稿确认后再决定是否迁入 docs/diagrams/ 并替换 README 引用。

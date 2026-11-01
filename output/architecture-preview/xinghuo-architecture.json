@@ -1,0 +1,1668 @@
+{
+  "title": "XingHuo NPU architecture",
+  "top": "XingHuoNpuTile",
+  "theme": "light",
+  "legend": false,
+  "description": "Tile overview and expanded NPU core. Functional colors; one synchronous clock domain. Shared RAM is provided by the SoC outside the Tile. The lower panel expands the same core shown above, not a second instance.",
+  "grid": {
+    "cell_w": 20,
+    "cell_h": 20,
+    "gutter_x": 0,
+    "gutter_y": 0,
+    "margin": 0
+  },
+  "domains": {
+    "clock": {
+      "color": "#EDF4F9",
+      "border": "#4B7795"
+    }
+  },
+  "groups": {},
+  "blocks": [
+    {
+      "id": "frontends",
+      "row": 11.5,
+      "col": 4.0,
+      "w": 220,
+      "h": 110,
+      "label": "Input frontends",
+      "paper": {
+        "fill": "#EDF4F9",
+        "stroke": "#4B7795",
+        "radius": 4,
+        "texts": [
+          {
+            "x": 190,
+            "y": 266,
+            "text": "Input frontends",
+            "size": 24,
+            "weight": 600,
+            "fill": "#213547",
+            "anchor": "middle"
+          },
+          {
+            "x": 190,
+            "y": 297,
+            "text": "Manual / host",
+            "size": 20,
+            "weight": 400,
+            "fill": "#213547",
+            "anchor": "middle"
+          },
+          {
+            "x": 190,
+            "y": 323,
+            "text": "Sync · debounce · toggle",
+            "size": 16,
+            "weight": 400,
+            "fill": "#627483",
+            "anchor": "middle"
+          }
+        ]
+      },
+      "domain": "clock"
+    },
+    {
+      "id": "mode_select",
+      "row": 12.25,
+      "col": 18.25,
+      "w": 165,
+      "h": 80,
+      "label": "Mode and command",
+      "paper": {
+        "fill": "#FBF2DF",
+        "stroke": "#A7752B",
+        "radius": 4,
+        "texts": [
+          {
+            "x": 447.5,
+            "y": 276,
+            "text": "Mode +",
+            "size": 22,
+            "weight": 600,
+            "fill": "#213547",
+            "anchor": "middle"
+          },
+          {
+            "x": 447.5,
+            "y": 304,
+            "text": "command",
+            "size": 22,
+            "weight": 600,
+            "fill": "#213547",
+            "anchor": "middle"
+          }
+        ]
+      },
+      "domain": "clock"
+    },
+    {
+      "id": "network_sequencer",
+      "row": 11.0,
+      "col": 30.0,
+      "w": 260,
+      "h": 140,
+      "label": "Two-layer sequencer",
+      "paper": {
+        "fill": "#FBF2DF",
+        "stroke": "#A7752B",
+        "radius": 4,
+        "texts": [
+          {
+            "x": 730,
+            "y": 251,
+            "text": "Two-layer sequencer",
+            "size": 22,
+            "weight": 600,
+            "fill": "#213547",
+            "anchor": "middle"
+          },
+          {
+            "x": 730,
+            "y": 280,
+            "text": "A / W / Bias / Shift",
+            "size": 19,
+            "weight": 400,
+            "fill": "#213547",
+            "anchor": "middle"
+          },
+          {
+            "x": 730,
+            "y": 317,
+            "text": "L1 → H → L2",
+            "size": 25,
+            "weight": 600,
+            "fill": "#213547",
+            "anchor": "middle"
+          },
+          {
+            "x": 730,
+            "y": 344,
+            "text": "XorNetworkController",
+            "size": 17,
+            "weight": 400,
+            "fill": "#627483",
+            "anchor": "middle"
+          }
+        ]
+      },
+      "domain": "clock"
+    },
+    {
+      "id": "core_overview",
+      "row": 11.5,
+      "col": 47.5,
+      "w": 230,
+      "h": 110,
+      "label": "NPU Core",
+      "paper": {
+        "fill": "#E9F4EF",
+        "stroke": "#287B6D",
+        "radius": 4,
+        "texts": [
+          {
+            "x": 1065,
+            "y": 271,
+            "text": "NPU Core",
+            "size": 28,
+            "weight": 600,
+            "fill": "#213547",
+            "anchor": "middle"
+          },
+          {
+            "x": 1065,
+            "y": 307,
+            "text": "2×2 INT8 · see (b)",
+            "size": 20,
+            "weight": 400,
+            "fill": "#213547",
+            "anchor": "middle"
+          }
+        ]
+      },
+      "domain": "clock"
+    },
+    {
+      "id": "ram_arbiter",
+      "row": 20.5,
+      "col": 30.0,
+      "w": 260,
+      "h": 65,
+      "label": "RAM write arbiter",
+      "paper": {
+        "fill": "#EDF4F9",
+        "stroke": "#4B7795",
+        "radius": 4,
+        "texts": [
+          {
+            "x": 730,
+            "y": 438,
+            "text": "RAM write arbiter",
+            "size": 22,
+            "weight": 600,
+            "fill": "#213547",
+            "anchor": "middle"
+          },
+          {
+            "x": 730,
+            "y": 463,
+            "text": "Address / write select",
+            "size": 17,
+            "weight": 400,
+            "fill": "#627483",
+            "anchor": "middle"
+          }
+        ]
+      },
+      "domain": "clock"
+    },
+    {
+      "id": "shared_ram",
+      "row": 11.5,
+      "col": 64.5,
+      "w": 230,
+      "h": 250,
+      "label": "SoC Shared RAM",
+      "paper": {
+        "fill": "#F2F5F7",
+        "stroke": "#8498A6",
+        "radius": 4,
+        "texts": [
+          {
+            "x": 1405,
+            "y": 269,
+            "text": "SoC Shared RAM",
+            "size": 23,
+            "weight": 600,
+            "fill": "#213547",
+            "anchor": "middle"
+          },
+          {
+            "x": 1405,
+            "y": 306,
+            "text": "256 × 8 bit",
+            "size": 27,
+            "weight": 600,
+            "fill": "#213547",
+            "anchor": "middle"
+          },
+          {
+            "x": 1405,
+            "y": 363,
+            "text": "A · W · B · H · Y",
+            "size": 19,
+            "weight": 400,
+            "fill": "#627483",
+            "anchor": "middle"
+          },
+          {
+            "x": 1405,
+            "y": 405,
+            "text": "Async read",
+            "size": 19,
+            "weight": 400,
+            "fill": "#213547",
+            "anchor": "middle"
+          },
+          {
+            "x": 1405,
+            "y": 432,
+            "text": "Sync write",
+            "size": 19,
+            "weight": 400,
+            "fill": "#213547",
+            "anchor": "middle"
+          },
+          {
+            "x": 1405,
+            "y": 463,
+            "text": "Outside the Tile",
+            "size": 18,
+            "weight": 600,
+            "fill": "#213547",
+            "anchor": "middle"
+          }
+        ]
+      },
+      "external": true
+    },
+    {
+      "id": "core_control",
+      "row": 31.75,
+      "col": 17.75,
+      "w": 1125,
+      "h": 55,
+      "label": "Core control",
+      "paper": {
+        "fill": "#FBF2DF",
+        "stroke": "#A7752B",
+        "radius": 4,
+        "texts": [
+          {
+            "x": 380,
+            "y": 670,
+            "text": "CoreController",
+            "size": 24,
+            "weight": 600,
+            "fill": "#213547",
+            "anchor": "start"
+          },
+          {
+            "x": 1455,
+            "y": 670,
+            "text": "Handshake · ComputeSequencer: phase / write-enable",
+            "size": 21,
+            "weight": 400,
+            "fill": "#213547",
+            "anchor": "end"
+          }
+        ]
+      },
+      "domain": "clock"
+    },
+    {
+      "id": "feeder",
+      "row": 38.25,
+      "col": 4.0,
+      "w": 190,
+      "h": 165,
+      "label": "Matrix feeder",
+      "paper": {
+        "fill": "#EDF4F9",
+        "stroke": "#4B7795",
+        "radius": 4,
+        "texts": [
+          {
+            "x": 175,
+            "y": 810,
+            "text": "Matrix feeder",
+            "size": 23,
+            "weight": 600,
+            "fill": "#213547",
+            "anchor": "middle"
+          },
+          {
+            "x": 175,
+            "y": 845,
+            "text": "A · 4×INT8",
+            "size": 21,
+            "weight": 400,
+            "fill": "#213547",
+            "anchor": "middle"
+          },
+          {
+            "x": 175,
+            "y": 876,
+            "text": "Skew + valid",
+            "size": 20,
+            "weight": 400,
+            "fill": "#213547",
+            "anchor": "middle"
+          },
+          {
+            "x": 175,
+            "y": 907,
+            "text": "MatrixFeeder",
+            "size": 16,
+            "weight": 400,
+            "fill": "#627483",
+            "anchor": "middle"
+          }
+        ]
+      },
+      "domain": "clock"
+    },
+    {
+      "id": "array",
+      "row": 36.5,
+      "col": 17.75,
+      "w": 470,
+      "h": 250,
+      "label": "2x2 weight-stationary array",
+      "paper": {
+        "fill": "#F4FAF7",
+        "stroke": "#287B6D",
+        "radius": 4,
+        "texts": [
+          {
+            "x": 590,
+            "y": 760,
+            "text": "2×2 weight-stationary array",
+            "size": 25,
+            "weight": 600,
+            "fill": "#213547",
+            "anchor": "middle"
+          }
+        ]
+      },
+      "domain": "clock"
+    },
+    {
+      "id": "collector",
+      "row": 38.25,
+      "col": 45.5,
+      "w": 175,
+      "h": 165,
+      "label": "Result collector",
+      "paper": {
+        "fill": "#EDF4F9",
+        "stroke": "#4B7795",
+        "radius": 4,
+        "texts": [
+          {
+            "x": 997.5,
+            "y": 810,
+            "text": "Result",
+            "size": 23,
+            "weight": 600,
+            "fill": "#213547",
+            "anchor": "middle"
+          },
+          {
+            "x": 997.5,
+            "y": 838,
+            "text": "collector",
+            "size": 23,
+            "weight": 600,
+            "fill": "#213547",
+            "anchor": "middle"
+          },
+          {
+            "x": 997.5,
+            "y": 876,
+            "text": "4×INT32",
+            "size": 22,
+            "weight": 400,
+            "fill": "#213547",
+            "anchor": "middle"
+          },
+          {
+            "x": 997.5,
+            "y": 906,
+            "text": "Registers",
+            "size": 18,
+            "weight": 400,
+            "fill": "#627483",
+            "anchor": "middle"
+          }
+        ]
+      },
+      "domain": "clock"
+    },
+    {
+      "id": "vpu",
+      "row": 38.25,
+      "col": 58.5,
+      "w": 310,
+      "h": 165,
+      "label": "Vector post-process",
+      "paper": {
+        "fill": "#E9F4EF",
+        "stroke": "#287B6D",
+        "radius": 4,
+        "texts": [
+          {
+            "x": 1325,
+            "y": 801,
+            "text": "Vector post-process",
+            "size": 24,
+            "weight": 600,
+            "fill": "#213547",
+            "anchor": "middle"
+          },
+          {
+            "x": 1325,
+            "y": 840,
+            "text": "Bias → Shift → Saturate",
+            "size": 21,
+            "weight": 400,
+            "fill": "#213547",
+            "anchor": "middle"
+          },
+          {
+            "x": 1325,
+            "y": 872,
+            "text": "ReLU → Result register",
+            "size": 21,
+            "weight": 400,
+            "fill": "#213547",
+            "anchor": "middle"
+          },
+          {
+            "x": 1325,
+            "y": 907,
+            "text": "4 lanes · INT32 → INT8",
+            "size": 18,
+            "weight": 400,
+            "fill": "#627483",
+            "anchor": "middle"
+          }
+        ]
+      },
+      "domain": "clock"
+    }
+  ],
+  "edges": [
+    {
+      "from": "frontends",
+      "to": "mode_select",
+      "kind": "generic",
+      "width": "cmd",
+      "route": {
+        "points": [
+          [
+            300,
+            285
+          ],
+          [
+            365,
+            285
+          ]
+        ]
+      },
+      "paper": {
+        "color": "#A7752B",
+        "stroke_width": 1.8,
+        "dash": "6 4",
+        "labels": [
+          {
+            "x": 332.5,
+            "y": 274,
+            "text": "cmd",
+            "size": 16,
+            "weight": 400,
+            "fill": "#A7752B",
+            "anchor": "middle"
+          }
+        ]
+      }
+    },
+    {
+      "from": "mode_select",
+      "to": "network_sequencer",
+      "kind": "generic",
+      "width": "start",
+      "route": {
+        "points": [
+          [
+            530,
+            285
+          ],
+          [
+            600,
+            285
+          ]
+        ]
+      },
+      "paper": {
+        "color": "#A7752B",
+        "stroke_width": 1.8,
+        "dash": "6 4",
+        "labels": [
+          {
+            "x": 565,
+            "y": 274,
+            "text": "start",
+            "size": 16,
+            "weight": 400,
+            "fill": "#A7752B",
+            "anchor": "middle"
+          }
+        ]
+      }
+    },
+    {
+      "from": "network_sequencer",
+      "to": "core_overview",
+      "kind": "generic",
+      "width": "task/W",
+      "route": {
+        "points": [
+          [
+            860,
+            260
+          ],
+          [
+            950,
+            260
+          ]
+        ]
+      },
+      "paper": {
+        "color": "#213547",
+        "stroke_width": 2.2,
+        "dash": null,
+        "labels": [
+          {
+            "x": 905,
+            "y": 249,
+            "text": "task / W",
+            "size": 16,
+            "weight": 400,
+            "fill": "#213547",
+            "anchor": "middle"
+          }
+        ]
+      }
+    },
+    {
+      "from": "core_overview",
+      "to": "network_sequencer",
+      "kind": "generic",
+      "width": 32,
+      "route": {
+        "points": [
+          [
+            950,
+            315
+          ],
+          [
+            860,
+            315
+          ]
+        ]
+      },
+      "paper": {
+        "color": "#287B6D",
+        "stroke_width": 2.6,
+        "dash": null,
+        "labels": [
+          {
+            "x": 905,
+            "y": 304,
+            "text": "result",
+            "size": 17,
+            "weight": 400,
+            "fill": "#287B6D",
+            "anchor": "middle"
+          }
+        ]
+      }
+    },
+    {
+      "from": "frontends",
+      "to": "ram_arbiter",
+      "kind": "generic",
+      "width": "8b RAM access",
+      "route": {
+        "points": [
+          [
+            190,
+            340
+          ],
+          [
+            190,
+            442
+          ],
+          [
+            600,
+            442
+          ]
+        ]
+      },
+      "paper": {
+        "color": "#4B7795",
+        "stroke_width": 2.2,
+        "dash": null,
+        "labels": [
+          {
+            "x": 391,
+            "y": 430,
+            "text": "Host / manual RAM access",
+            "size": 18,
+            "weight": 400,
+            "fill": "#4B7795",
+            "anchor": "middle"
+          }
+        ]
+      }
+    },
+    {
+      "from": "network_sequencer",
+      "to": "ram_arbiter",
+      "kind": "generic",
+      "width": "8b write",
+      "route": {
+        "points": [
+          [
+            700,
+            360
+          ],
+          [
+            700,
+            410
+          ]
+        ]
+      },
+      "paper": {
+        "color": "#4B7795",
+        "stroke_width": 2.2,
+        "dash": null,
+        "labels": []
+      }
+    },
+    {
+      "from": "ram_arbiter",
+      "to": "shared_ram",
+      "kind": "generic",
+      "width": "8b addr/data",
+      "route": {
+        "points": [
+          [
+            860,
+            442
+          ],
+          [
+            1290,
+            442
+          ]
+        ]
+      },
+      "paper": {
+        "color": "#4B7795",
+        "stroke_width": 2.2,
+        "dash": null,
+        "labels": [
+          {
+            "x": 1075,
+            "y": 431,
+            "text": "addr[7:0] · we · wdata[7:0]",
+            "size": 18,
+            "weight": 400,
+            "fill": "#4B7795",
+            "anchor": "middle"
+          }
+        ]
+      }
+    },
+    {
+      "from": "shared_ram",
+      "to": "network_sequencer",
+      "kind": "generic",
+      "width": 8,
+      "route": {
+        "points": [
+          [
+            1290,
+            390
+          ],
+          [
+            790,
+            390
+          ],
+          [
+            790,
+            360
+          ]
+        ]
+      },
+      "paper": {
+        "color": "#4B7795",
+        "stroke_width": 2.2,
+        "dash": null,
+        "labels": [
+          {
+            "x": 1040,
+            "y": 379,
+            "text": "rdata[7:0]",
+            "size": 18,
+            "weight": 400,
+            "fill": "#4B7795",
+            "anchor": "middle"
+          }
+        ]
+      }
+    },
+    {
+      "from": "feeder",
+      "to": "array",
+      "kind": "generic",
+      "width": "2x8b",
+      "route": {
+        "points": [
+          [
+            270,
+            850
+          ],
+          [
+            355,
+            850
+          ]
+        ]
+      },
+      "paper": {
+        "color": "#4B7795",
+        "stroke_width": 2.8,
+        "dash": null,
+        "labels": [
+          {
+            "x": 312.5,
+            "y": 838,
+            "text": "2×INT8",
+            "size": 16,
+            "weight": 400,
+            "fill": "#4B7795",
+            "anchor": "middle"
+          }
+        ]
+      }
+    },
+    {
+      "from": "array",
+      "to": "collector",
+      "kind": "generic",
+      "width": "2x32b",
+      "route": {
+        "points": [
+          [
+            825,
+            850
+          ],
+          [
+            910,
+            850
+          ]
+        ]
+      },
+      "paper": {
+        "color": "#287B6D",
+        "stroke_width": 2.8,
+        "dash": null,
+        "labels": [
+          {
+            "x": 867.5,
+            "y": 838,
+            "text": "2×INT32",
+            "size": 16,
+            "weight": 400,
+            "fill": "#287B6D",
+            "anchor": "middle"
+          }
+        ]
+      }
+    },
+    {
+      "from": "collector",
+      "to": "vpu",
+      "kind": "generic",
+      "width": "4x32b",
+      "route": {
+        "points": [
+          [
+            1085,
+            850
+          ],
+          [
+            1170,
+            850
+          ]
+        ]
+      },
+      "paper": {
+        "color": "#287B6D",
+        "stroke_width": 2.8,
+        "dash": null,
+        "labels": [
+          {
+            "x": 1127.5,
+            "y": 838,
+            "text": "4×INT32",
+            "size": 16,
+            "weight": 400,
+            "fill": "#287B6D",
+            "anchor": "middle"
+          }
+        ]
+      }
+    },
+    {
+      "from": "core_control",
+      "to": "feeder",
+      "kind": "generic",
+      "width": "control",
+      "route": {
+        "points": [
+          [
+            395,
+            690
+          ],
+          [
+            395,
+            710
+          ],
+          [
+            175,
+            710
+          ],
+          [
+            175,
+            765
+          ]
+        ]
+      },
+      "paper": {
+        "color": "#A7752B",
+        "stroke_width": 1.7,
+        "dash": "6 4",
+        "labels": []
+      }
+    },
+    {
+      "from": "core_control",
+      "to": "array",
+      "kind": "generic",
+      "width": "control",
+      "route": {
+        "points": [
+          [
+            590,
+            690
+          ],
+          [
+            590,
+            730
+          ]
+        ]
+      },
+      "paper": {
+        "color": "#A7752B",
+        "stroke_width": 1.7,
+        "dash": "6 4",
+        "labels": []
+      }
+    },
+    {
+      "from": "core_control",
+      "to": "collector",
+      "kind": "generic",
+      "width": "control",
+      "route": {
+        "points": [
+          [
+            997.5,
+            690
+          ],
+          [
+            997.5,
+            765
+          ]
+        ]
+      },
+      "paper": {
+        "color": "#A7752B",
+        "stroke_width": 1.7,
+        "dash": "6 4",
+        "labels": []
+      }
+    },
+    {
+      "from": "core_control",
+      "to": "vpu",
+      "kind": "generic",
+      "width": "control",
+      "route": {
+        "points": [
+          [
+            1450,
+            690
+          ],
+          [
+            1450,
+            765
+          ]
+        ]
+      },
+      "paper": {
+        "color": "#A7752B",
+        "stroke_width": 1.7,
+        "dash": "6 4",
+        "labels": []
+      }
+    }
+  ],
+  "paper": {
+    "width": 1560,
+    "height": 1110,
+    "background": "#FFFFFF",
+    "fonts": "Arial, Helvetica, sans-serif",
+    "regions": [
+      {
+        "id": "tile",
+        "x": 40,
+        "y": 170,
+        "w": 1180,
+        "h": 340,
+        "fill": "#FCFDFE",
+        "stroke": "#BCCAD2",
+        "dash": "7 5",
+        "radius": 8
+      },
+      {
+        "id": "core_detail",
+        "x": 40,
+        "y": 610,
+        "w": 1480,
+        "h": 410,
+        "fill": "#FFFFFF",
+        "stroke": "#BCCAD2",
+        "dash": null,
+        "radius": 8
+      }
+    ],
+    "texts": [
+      {
+        "x": 40,
+        "y": 55,
+        "text": "XingHuo NPU",
+        "size": 36,
+        "weight": 700,
+        "fill": "#213547",
+        "anchor": "start"
+      },
+      {
+        "x": 40,
+        "y": 87,
+        "text": "A compact, two-layer neural accelerator",
+        "size": 20,
+        "weight": 400,
+        "fill": "#627483",
+        "anchor": "start"
+      },
+      {
+        "x": 1520,
+        "y": 55,
+        "text": "2×2 INT8  /  WEIGHT STATIONARY",
+        "size": 18,
+        "weight": 700,
+        "fill": "#213547",
+        "anchor": "end"
+      },
+      {
+        "x": 1520,
+        "y": 84,
+        "text": "MPSoC-Digital Tile",
+        "size": 19,
+        "weight": 400,
+        "fill": "#627483",
+        "anchor": "end"
+      },
+      {
+        "x": 40,
+        "y": 149,
+        "text": "(a)  Tile-level architecture",
+        "size": 24,
+        "weight": 700,
+        "fill": "#213547",
+        "anchor": "start"
+      },
+      {
+        "x": 60,
+        "y": 196,
+        "text": "XingHuoNpuTile",
+        "size": 17,
+        "weight": 600,
+        "fill": "#627483",
+        "anchor": "start"
+      },
+      {
+        "x": 1180,
+        "y": 196,
+        "text": "User logic boundary",
+        "size": 16,
+        "weight": 400,
+        "fill": "#627483",
+        "anchor": "end"
+      },
+      {
+        "x": 80,
+        "y": 492,
+        "text": "Display + response → LED / HEX / customOut",
+        "size": 18,
+        "weight": 400,
+        "fill": "#627483",
+        "anchor": "start"
+      },
+      {
+        "x": 40,
+        "y": 540,
+        "text": "Read data also feeds host / display directly; observation and handshake return wires are omitted.",
+        "size": 18,
+        "weight": 400,
+        "fill": "#627483",
+        "anchor": "start"
+      },
+      {
+        "x": 40,
+        "y": 587,
+        "text": "(b)  Core microarchitecture",
+        "size": 24,
+        "weight": 700,
+        "fill": "#213547",
+        "anchor": "start"
+      },
+      {
+        "x": 1520,
+        "y": 587,
+        "text": "XingHuo_NPU · the same core as in (a)",
+        "size": 18,
+        "weight": 400,
+        "fill": "#627483",
+        "anchor": "end"
+      },
+      {
+        "x": 80,
+        "y": 661,
+        "text": "A / W / Bias / Shift",
+        "size": 18,
+        "weight": 600,
+        "fill": "#213547",
+        "anchor": "start"
+      },
+      {
+        "x": 80,
+        "y": 688,
+        "text": "Held by sequencer",
+        "size": 17,
+        "weight": 400,
+        "fill": "#627483",
+        "anchor": "start"
+      },
+      {
+        "x": 285,
+        "y": 749,
+        "text": "W · 4×INT8",
+        "size": 17,
+        "weight": 400,
+        "fill": "#4B7795",
+        "anchor": "end"
+      },
+      {
+        "x": 1290,
+        "y": 727,
+        "text": "Bias · 2×INT32 + shift[4:0]",
+        "size": 17,
+        "weight": 400,
+        "fill": "#4B7795",
+        "anchor": "middle"
+      },
+      {
+        "x": 867.5,
+        "y": 875,
+        "text": "streams",
+        "size": 15,
+        "weight": 400,
+        "fill": "#627483",
+        "anchor": "middle"
+      },
+      {
+        "x": 460,
+        "y": 815,
+        "text": "MAC",
+        "size": 21,
+        "weight": 600,
+        "fill": "#213547",
+        "anchor": "middle"
+      },
+      {
+        "x": 460,
+        "y": 839,
+        "text": "W00",
+        "size": 19,
+        "weight": 400,
+        "fill": "#213547",
+        "anchor": "middle"
+      },
+      {
+        "x": 720,
+        "y": 815,
+        "text": "MAC",
+        "size": 21,
+        "weight": 600,
+        "fill": "#213547",
+        "anchor": "middle"
+      },
+      {
+        "x": 720,
+        "y": 839,
+        "text": "W10",
+        "size": 19,
+        "weight": 400,
+        "fill": "#213547",
+        "anchor": "middle"
+      },
+      {
+        "x": 460,
+        "y": 920,
+        "text": "MAC",
+        "size": 21,
+        "weight": 600,
+        "fill": "#213547",
+        "anchor": "middle"
+      },
+      {
+        "x": 460,
+        "y": 944,
+        "text": "W01",
+        "size": 19,
+        "weight": 400,
+        "fill": "#213547",
+        "anchor": "middle"
+      },
+      {
+        "x": 720,
+        "y": 920,
+        "text": "MAC",
+        "size": 21,
+        "weight": 600,
+        "fill": "#213547",
+        "anchor": "middle"
+      },
+      {
+        "x": 720,
+        "y": 944,
+        "text": "W11",
+        "size": 19,
+        "weight": 400,
+        "fill": "#213547",
+        "anchor": "middle"
+      },
+      {
+        "x": 590,
+        "y": 809,
+        "text": "psum",
+        "size": 16,
+        "weight": 400,
+        "fill": "#287B6D",
+        "anchor": "middle"
+      },
+      {
+        "x": 484,
+        "y": 878,
+        "text": "act.",
+        "size": 16,
+        "weight": 400,
+        "fill": "#4B7795",
+        "anchor": "start"
+      },
+      {
+        "x": 590,
+        "y": 1007,
+        "text": "Activation ↓   ·   INT32 partial sum →",
+        "size": 18,
+        "weight": 400,
+        "fill": "#627483",
+        "anchor": "middle"
+      },
+      {
+        "x": 1325,
+        "y": 989,
+        "text": "Y · 4×INT8 → sequencer",
+        "size": 21,
+        "weight": 600,
+        "fill": "#287B6D",
+        "anchor": "middle"
+      },
+      {
+        "x": 76,
+        "y": 1080,
+        "text": "Interfaces / registers",
+        "size": 18,
+        "weight": 400,
+        "fill": "#627483",
+        "anchor": "start"
+      },
+      {
+        "x": 386,
+        "y": 1080,
+        "text": "Control",
+        "size": 18,
+        "weight": 400,
+        "fill": "#627483",
+        "anchor": "start"
+      },
+      {
+        "x": 576,
+        "y": 1080,
+        "text": "Compute",
+        "size": 18,
+        "weight": 400,
+        "fill": "#627483",
+        "anchor": "start"
+      },
+      {
+        "x": 834,
+        "y": 1080,
+        "text": "Data",
+        "size": 18,
+        "weight": 400,
+        "fill": "#627483",
+        "anchor": "start"
+      },
+      {
+        "x": 999,
+        "y": 1080,
+        "text": "Control",
+        "size": 18,
+        "weight": 400,
+        "fill": "#627483",
+        "anchor": "start"
+      },
+      {
+        "x": 1520,
+        "y": 1080,
+        "text": "One clock domain",
+        "size": 18,
+        "weight": 400,
+        "fill": "#627483",
+        "anchor": "end"
+      }
+    ],
+    "decorations": [
+      {
+        "type": "line",
+        "points": [
+          [
+            40,
+            109
+          ],
+          [
+            1520,
+            109
+          ]
+        ],
+        "stroke": "#DCE4E9",
+        "stroke_width": 1.2,
+        "arrow": false,
+        "dash": null
+      },
+      {
+        "type": "rect",
+        "x": 1320,
+        "y": 324,
+        "w": 24,
+        "h": 15,
+        "fill": "#DCE6ED",
+        "stroke": "#9BABB8",
+        "stroke_width": 0.8,
+        "radius": 0
+      },
+      {
+        "type": "rect",
+        "x": 1344,
+        "y": 324,
+        "w": 24,
+        "h": 15,
+        "fill": "#DCE6ED",
+        "stroke": "#9BABB8",
+        "stroke_width": 0.8,
+        "radius": 0
+      },
+      {
+        "type": "rect",
+        "x": 1368,
+        "y": 324,
+        "w": 24,
+        "h": 15,
+        "fill": "#DCE6ED",
+        "stroke": "#9BABB8",
+        "stroke_width": 0.8,
+        "radius": 0
+      },
+      {
+        "type": "rect",
+        "x": 1392,
+        "y": 324,
+        "w": 24,
+        "h": 15,
+        "fill": "#DCE6ED",
+        "stroke": "#9BABB8",
+        "stroke_width": 0.8,
+        "radius": 0
+      },
+      {
+        "type": "rect",
+        "x": 1416,
+        "y": 324,
+        "w": 24,
+        "h": 15,
+        "fill": "#DCE6ED",
+        "stroke": "#9BABB8",
+        "stroke_width": 0.8,
+        "radius": 0
+      },
+      {
+        "type": "rect",
+        "x": 1440,
+        "y": 324,
+        "w": 24,
+        "h": 15,
+        "fill": "#DCE6ED",
+        "stroke": "#9BABB8",
+        "stroke_width": 0.8,
+        "radius": 0
+      },
+      {
+        "type": "rect",
+        "x": 1464,
+        "y": 324,
+        "w": 24,
+        "h": 15,
+        "fill": "#DCE6ED",
+        "stroke": "#9BABB8",
+        "stroke_width": 0.8,
+        "radius": 0
+      },
+      {
+        "type": "line",
+        "points": [
+          [
+            295,
+            745
+          ],
+          [
+            355,
+            745
+          ]
+        ],
+        "stroke": "#4B7795",
+        "stroke_width": 2.1,
+        "arrow": true,
+        "dash": null
+      },
+      {
+        "type": "line",
+        "points": [
+          [
+            1290,
+            739
+          ],
+          [
+            1290,
+            765
+          ]
+        ],
+        "stroke": "#4B7795",
+        "stroke_width": 2.1,
+        "arrow": true,
+        "dash": null
+      },
+      {
+        "type": "rect",
+        "x": 395,
+        "y": 790,
+        "w": 130,
+        "h": 60,
+        "fill": "#DCEFE7",
+        "stroke": "#287B6D",
+        "stroke_width": 1.4,
+        "radius": 3,
+        "id": "pe_W00"
+      },
+      {
+        "type": "rect",
+        "x": 655,
+        "y": 790,
+        "w": 130,
+        "h": 60,
+        "fill": "#DCEFE7",
+        "stroke": "#287B6D",
+        "stroke_width": 1.4,
+        "radius": 3,
+        "id": "pe_W10"
+      },
+      {
+        "type": "rect",
+        "x": 395,
+        "y": 895,
+        "w": 130,
+        "h": 60,
+        "fill": "#DCEFE7",
+        "stroke": "#287B6D",
+        "stroke_width": 1.4,
+        "radius": 3,
+        "id": "pe_W01"
+      },
+      {
+        "type": "rect",
+        "x": 655,
+        "y": 895,
+        "w": 130,
+        "h": 60,
+        "fill": "#DCEFE7",
+        "stroke": "#287B6D",
+        "stroke_width": 1.4,
+        "radius": 3,
+        "id": "pe_W11"
+      },
+      {
+        "type": "line",
+        "points": [
+          [
+            460,
+            850
+          ],
+          [
+            460,
+            895
+          ]
+        ],
+        "stroke": "#4B7795",
+        "stroke_width": 2.1,
+        "arrow": true,
+        "dash": null
+      },
+      {
+        "type": "line",
+        "points": [
+          [
+            720,
+            850
+          ],
+          [
+            720,
+            895
+          ]
+        ],
+        "stroke": "#4B7795",
+        "stroke_width": 2.1,
+        "arrow": true,
+        "dash": null
+      },
+      {
+        "type": "line",
+        "points": [
+          [
+            525,
+            820
+          ],
+          [
+            655,
+            820
+          ]
+        ],
+        "stroke": "#287B6D",
+        "stroke_width": 2.4,
+        "arrow": true,
+        "dash": null
+      },
+      {
+        "type": "line",
+        "points": [
+          [
+            525,
+            925
+          ],
+          [
+            655,
+            925
+          ]
+        ],
+        "stroke": "#287B6D",
+        "stroke_width": 2.4,
+        "arrow": true,
+        "dash": null
+      },
+      {
+        "type": "line",
+        "points": [
+          [
+            1325,
+            930
+          ],
+          [
+            1325,
+            957
+          ]
+        ],
+        "stroke": "#287B6D",
+        "stroke_width": 2.7,
+        "arrow": true,
+        "dash": null
+      },
+      {
+        "type": "line",
+        "points": [
+          [
+            40,
+            1041
+          ],
+          [
+            1520,
+            1041
+          ]
+        ],
+        "stroke": "#DCE4E9",
+        "stroke_width": 1.2,
+        "arrow": false,
+        "dash": null
+      },
+      {
+        "type": "rect",
+        "x": 40,
+        "y": 1064,
+        "w": 24,
+        "h": 18,
+        "fill": "#EDF4F9",
+        "stroke": "#BCCAD2",
+        "stroke_width": 0.8,
+        "radius": 0
+      },
+      {
+        "type": "rect",
+        "x": 350,
+        "y": 1064,
+        "w": 24,
+        "h": 18,
+        "fill": "#FBF2DF",
+        "stroke": "#BCCAD2",
+        "stroke_width": 0.8,
+        "radius": 0
+      },
+      {
+        "type": "rect",
+        "x": 540,
+        "y": 1064,
+        "w": 24,
+        "h": 18,
+        "fill": "#E9F4EF",
+        "stroke": "#BCCAD2",
+        "stroke_width": 0.8,
+        "radius": 0
+      },
+      {
+        "type": "line",
+        "points": [
+          [
+            770,
+            1073
+          ],
+          [
+            820,
+            1073
+          ]
+        ],
+        "stroke": "#213547",
+        "stroke_width": 2.2,
+        "arrow": true,
+        "dash": null
+      },
+      {
+        "type": "line",
+        "points": [
+          [
+            935,
+            1073
+          ],
+          [
+            985,
+            1073
+          ]
+        ],
+        "stroke": "#A7752B",
+        "stroke_width": 1.7,
+        "arrow": true,
+        "dash": "6 4"
+      }
+    ]
+  }
+}
